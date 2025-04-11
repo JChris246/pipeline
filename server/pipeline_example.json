@@ -1,0 +1,38 @@
+{
+    "name": "media_central",
+    "parallel": true,
+    "variable_file": "variables.txt",
+    "stages": [
+        {
+            "name": "discover new items",
+            "task": "node {mediaCentralPath}/media_central_index.js",
+            "pwd": "{mediaCentralPath}",
+            "depends_on": []
+        },
+        {
+            "name": "transcribe",
+            "task": "node {mediaCentralPath}/transcription/transcribe.js",
+            "depends_on": ["discover new items"]
+        },
+        {
+            "name": "get tags",
+            "task": "node {mediaCentralPath}/utils/getTags.js",
+            "depends_on": ["discover new items"]
+        },
+        {
+            "name": "refresh cuts",
+            "task": "node {cutsPath}/utils.js",
+            "depends_on": ["discover new items"]
+        },
+        {
+            "name": "create similarity map",
+            "task": "python {mediaCentralPath}/inference/cluster.py",
+            "depends_on": ["discover new items", "get tags", "transcribe"]
+        },
+        {
+            "name": "backup",
+            "task": "node {mediaCentralPath}/utils/backup.js",
+            "depends_on": ["discover new items", "create similarity map"]
+        }
+    ]
+}

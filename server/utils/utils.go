@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
+
+func GenerateId() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return fmt.Sprintf("%x-%x-%x-%x-%x%x-%d", b[0:4], b[4:6], b[6:8], b[8:10], b[10:12], b[12:], time.Now().UnixNano())
+}
 
 // GetCurrentTimeStamp generates a timestamp in the format "YYYY-MM-DD HH_MM" or "YYYY-MM-DD HH_MM_SS" if seconds is true.
 //
@@ -158,4 +165,26 @@ func SetupLogger(logName string) (*os.File, *logrus.Logger) {
 		Logger.Warn("Unable to setup logger with a file")
 		return nil, Logger
 	}
+}
+
+func InitDataStoreDir(logger *logrus.Logger) {
+	if _, err := os.Stat(os.Getenv("DATA_STORE_DIR")); os.IsNotExist(err) {
+		err2 := os.MkdirAll(os.Getenv("DATA_STORE_DIR"), os.ModePerm)
+		if err2 != nil {
+			logger.Error("Error creating log directory: " + os.Getenv("DATA_STORE_DIR") + " - " + err2.Error())
+		} else {
+			logger.Debug("Log directory created: " + os.Getenv("DATA_STORE_DIR"))
+		}
+	}
+}
+
+func DeleteFile(filename string, logger *logrus.Logger) bool {
+	if filename != "" {
+		err := os.Remove(filename)
+		if err != nil {
+			logger.Error("Error deleting file '" + filename + "': " + err.Error())
+			return false
+		}
+	}
+	return true
 }

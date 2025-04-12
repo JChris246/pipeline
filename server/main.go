@@ -83,7 +83,7 @@ func serve(logger *logrus.Logger) {
 		router.Use(gin.Recovery())
 	}
 
-	defineRoutes(router /*, logger*/)
+	defineRoutes(router, logger)
 
 	router.StaticFile("/", "static/index.html")
 	router.Static("/assets", "static/assets")

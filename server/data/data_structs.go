@@ -9,7 +9,7 @@ type Stage struct {
 }
 
 type Pipeline struct {
-	Name         string // this is not technically required unless you are using the UI and registering pipeline
+	Name         string
 	Stages       []Stage
 	Parallel     bool
 	VariableFile string `json:"variable_file"`
@@ -21,4 +21,11 @@ type TaskStatusResponse struct {
 	// instead of bool success, use a status enum for returning to the UI
 	TaskName   string
 	Successful bool
+}
+
+type RegisteredPipeline struct {
+	Name          string // the name of the pipeline, use as key
+	Path          string // where the definition is stored
+	VariablesFile string
+	// TODO: should I add a list of runs here?
 }

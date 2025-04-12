@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"os"
+	"path"
 	"pipeline/data"
 	"regexp"
 	"strconv"
@@ -35,9 +36,10 @@ func validateVars(str string, variables map[string]string) []string {
 func ValidatePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) []string {
 	var errors []string
 
-	// validate pipeline name; don't fail hard (maybe I should?)
+	// validate pipeline name
 	if pipeline.Name == "" {
-		logger.Warn("Pipeline name is missing")
+		logger.Error("Pipeline name is missing")
+		errors = append(errors, "Pipeline name is missing")
 	}
 
 	// validate and load variable file
@@ -47,7 +49,7 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) 
 			logger.Error("Variable file does not exist: " + pipeline.VariableFile)
 			errors = append(errors, "Variable file does not exist: "+pipeline.VariableFile)
 		} else {
-			variables = loadPipelineVars(pipeline.VariableFile, logger)
+			variables = LoadPipelineVars(pipeline.VariableFile, logger)
 		}
 	}
 
@@ -134,7 +136,7 @@ func LoadDefinition(definitionPath string, logger *logrus.Logger) *data.Pipeline
 	return &pipeline
 }
 
-func loadPipelineVars(varFile string, logger *logrus.Logger) map[string]string {
+func LoadPipelineVars(varFile string, logger *logrus.Logger) map[string]string {
 	var variables = make(map[string]string)
 	if varFile != "" {
 		data, err := os.ReadFile(varFile)
@@ -177,4 +179,59 @@ func injectVariables(task string, variables map[string]string) string {
 		varName := match[1 : len(match)-1]
 		return variables[varName]
 	})
+}
+
+func CreateVariableFile(variables map[string]string, logger *logrus.Logger) string {
+	InitDataStoreDir(logger)
+
+	var fileId = GenerateId()
+	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), "pipeline-variables-"+fileId+".properties")
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		logger.Error("Error creating variable file: " + err.Error())
+		return ""
+	}
+
+	for key, value := range variables {
+		_, err = file.WriteString(key + "=" + value + "\n")
+		if err != nil {
+			logger.Error("Error writing to variable file: " + err.Error())
+			return ""
+		}
+	}
+
+	err = file.Close()
+	if err != nil {
+		logger.Error("Error closing variable file: " + err.Error())
+		return ""
+	}
+
+	return filename
+}
+
+func SavePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) string {
+	InitDataStoreDir(logger)
+
+	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), pipeline.Name+".json")
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		logger.Error("Error creating pipeline definition file: " + err.Error())
+		return ""
+	}
+
+	err = json.NewEncoder(file).Encode(pipeline)
+	if err != nil {
+		logger.Error("Error writing to pipeline definition file: " + err.Error())
+		return ""
+	}
+
+	err = file.Close()
+	if err != nil {
+		logger.Error("Error closing pipeline definition file: " + err.Error())
+		return ""
+	}
+
+	return filename
 }

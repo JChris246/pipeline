@@ -152,7 +152,7 @@ func Test_loadPipelineVars_ShouldReturnEmptyMapWhenFileDoesNotExist(t *testing.T
 	var filePath = "/does/not/exist"
 
 	// act
-	var variables = loadPipelineVars(filePath, testLogger)
+	var variables = LoadPipelineVars(filePath, testLogger)
 
 	// assert
 	AssertEqual(t, 0, len(variables))
@@ -163,7 +163,7 @@ func Test_loadPipelineVars_ShouldCorrectlyLoadVarsFromFile(t *testing.T) {
 	var filePath = "../test_assets/test_var_file.txt"
 
 	// act
-	var variables = loadPipelineVars(filePath, testLogger)
+	var variables = LoadPipelineVars(filePath, testLogger)
 
 	// assert
 	AssertStringEqual(t, "/home/root/Documents", variables["root"])

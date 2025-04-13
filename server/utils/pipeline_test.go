@@ -14,7 +14,7 @@ var _, testLogger = SetupLogger("test.log")
 
 func Test_ValidatePipelineDefinition_ReturnsErrorForHavingZeroStages(t *testing.T) {
 	// act
-	var errors = ValidatePipelineDefinition(&data.Pipeline{Stages: []data.Stage{}}, testLogger)
+	var errors = ValidatePipelineDefinition(&data.Pipeline{Stages: []data.Stage{}}, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
@@ -27,7 +27,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForHavingAStageWithNoName(t *te
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "", Task: "echo"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
@@ -43,7 +43,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForHavingAStageWithNoTask(t *te
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
@@ -58,7 +58,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForHavingAStageWithDuplicateNam
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
@@ -72,7 +72,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForHavingAStageWithNonExistentD
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 2", Task: "echo"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
@@ -85,21 +85,50 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForNonExistentVariableFile(t *t
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "echo"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertMin(t, 1, len(errors))
 	AssertContains(t, errors, "Variable file does not exist: does/not/exist")
 }
 
-// testing pass by reference
-func Test_ValidatePipelineDefinition_ReturnsPipelineWithInjectedVars(t *testing.T) {
+// TODO: add tests for ValidatePipelineDefinition where vars are passed
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficient(t *testing.T) {
 	// arrange
 	var pipeline = data.Pipeline{Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
 
 	// act
-	var errors = ValidatePipelineDefinition(&pipeline, testLogger)
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertMin(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: root")
+}
+
+func Test_ValidatePipelineDefinition_ShouldUsePassedVariablesInsteadOfVariableFile(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "pipeline 1", Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
+	var variables = map[string]string{"root": "/home/root/Downloads"}
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &variables, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "node /home/root/Downloads/media_central_index.js", pipeline.Stages[0].Task)
+	AssertStringEqual(t, "/home/root/Downloads", pipeline.Stages[0].Pwd)
+}
+
+// testing pass by reference
+func Test_ValidatePipelineDefinition_ReturnsPipelineWithInjectedVars(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "pipeline 1", Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
 
 	// assert
 	AssertEqual(t, 0, len(errors))

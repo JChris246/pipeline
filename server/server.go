@@ -29,6 +29,7 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 		c.JSON(200, registeredPipelineResponses)
 	})
 
+	// return the details of a pipeline (including run status)
 	router.GET(pipeline+"/:name", func(c *gin.Context) {
 		var details, statusCode = getPipelineDetails(c.Param("name"), logger)
 		c.JSON(statusCode, details)
@@ -59,6 +60,36 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 		var msg, statusCode = registerPipelineFromFile(&requestBody, logger)
 		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
 	})
+
+	// delete a pipeline
+	router.DELETE(register+"/:name", func(c *gin.Context) {
+		var msg, statusCode = deletePipeline(c.Param("name"), logger)
+		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
+	})
+
+	// edit a pipeline
+	router.PATCH(pipeline+"/:name", func(c *gin.Context) {
+		var requestBody data.EditPipelineRequest
+		if err := c.ShouldBind(&requestBody); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+
+		var msg, statusCode = editPipeline(c.Param("name"), &requestBody, logger)
+		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
+	})
+
+	// start a pipeline run
+	router.POST(pipeline+"/:name", func(c *gin.Context) {
+		var msg, statusCode = launchPipeline(c.Param("name"), logger)
+		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
+	})
+
+	// cancel a pipeline run
+	router.DELETE(pipeline+"/:name", func(c *gin.Context) {
+		var msg, statusCode = cancelPipeline(c.Param("name"), logger)
+		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
+	})
 }
 
 func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, logger *logrus.Logger) (string, int) {
@@ -78,7 +109,7 @@ func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, log
 		pipelineRequest.PipelineDefinition.VariableFile = varsFile
 	}
 
-	var errors = utils.ValidatePipelineDefinition(&pipelineRequest.PipelineDefinition, logger)
+	var errors = utils.ValidatePipelineDefinition(&pipelineRequest.PipelineDefinition, nil, logger)
 	if len(errors) > 0 {
 		logger.Warn("Invalid pipeline definition: " + strings.Join(errors, "\n"))
 		utils.DeleteFile(varsFile, logger)
@@ -119,7 +150,7 @@ func registerPipelineFromFile(pipelineRequest *data.RegisterFilePath, logger *lo
 		return "Pipeline with name '" + newPipeline.Name + "' already exists", 409
 	}
 
-	var errors = utils.ValidatePipelineDefinition(newPipeline, logger)
+	var errors = utils.ValidatePipelineDefinition(newPipeline, nil, logger)
 	if len(errors) > 0 {
 		logger.Warn("Invalid pipeline definition: " + strings.Join(errors, "\n"))
 		return "Invalid pipeline definition: " + strings.Join(errors, "\n"), 400
@@ -174,4 +205,91 @@ func getPipelineDetails(name string, logger *logrus.Logger) (*data.RegisteredPip
 	}
 
 	return &details, 200
+}
+
+func deletePipeline(name string, logger *logrus.Logger) (string, int) {
+	// TODO: don't allow deleting a pipeline if it is running
+	var registeredPipelines = loadRegisteredPipelines(logger)
+
+	if _, exists := registeredPipelines[name]; !exists {
+		logger.Warn("Pipeline with name '" + name + "' does not exist")
+		return "Pipeline with name '" + name + "' does not exist", 404
+	}
+
+	utils.DeleteFile(registeredPipelines[name].Path, logger)
+	utils.DeleteFile(registeredPipelines[name].VariablesFile, logger)
+	delete(registeredPipelines, name)
+
+	saveRegisteredPipelines(registeredPipelines, logger)
+
+	return "Pipeline deleted", 204
+}
+
+func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger *logrus.Logger) (string, int) {
+	// TODO: don't allow editing a pipeline if it is running
+	var registeredPipelines = loadRegisteredPipelines(logger)
+
+	if _, exists := registeredPipelines[name]; !exists {
+		logger.Warn("Pipeline with name '" + name + "' does not exist")
+		return "Pipeline with name '" + name + "' does not exist", 404
+	}
+
+	// check if request is to change the pipeline to one that already exists
+	if _, exists := registeredPipelines[pipelineRequest.Name]; exists {
+		logger.Warn("Cannot change pipeline name: '" + pipelineRequest.Name + "' already exists")
+		return "Cannot change pipeline name: '" + pipelineRequest.Name + "' already exists", 409
+	}
+
+	var editPipeline = data.Pipeline{
+		Name:     pipelineRequest.Name,
+		Stages:   pipelineRequest.Stages,
+		Parallel: pipelineRequest.Parallel,
+	}
+
+	var errors = utils.ValidatePipelineDefinition(&editPipeline, &pipelineRequest.Variables, logger)
+	if len(errors) > 0 {
+		logger.Warn("Invalid pipeline definition: " + strings.Join(errors, "\n"))
+		return "Invalid pipeline definition: " + strings.Join(errors, "\n"), 400
+	}
+
+	editPipeline.VariableFile = registeredPipelines[name].VariablesFile
+
+	var filename = utils.SavePipelineDefinition(&editPipeline, logger)
+	if filename == "" {
+		return "Error saving pipeline definition", 500
+	}
+
+	// if this fails it has the potential to break the pipeline because of missing variables
+	var error = utils.SaveVariableFile(pipelineRequest.Variables, registeredPipelines[name].VariablesFile, logger)
+	if error != "" {
+		return "Error saving variable file", 500
+	}
+
+	// if the name has changed, update index in registeredPipelines
+	if pipelineRequest.Name != name {
+		delete(registeredPipelines, name)
+		registeredPipelines[pipelineRequest.Name] = data.RegisteredPipeline{
+			Name:          pipelineRequest.Name,
+			VariablesFile: editPipeline.VariableFile,
+			Path:          filename,
+		}
+
+		// this also has the potential to leave data in a weird state if this fails
+		if !saveRegisteredPipelines(registeredPipelines, logger) {
+			return "Error saving registered pipelines", 500
+		}
+	}
+
+	return "Pipeline updated", 200
+}
+
+func launchPipeline(name string, logger *logrus.Logger) (string, int) {
+	// TODO: don't allow launching a new pipeline run if it is already running
+	logger.Info("Launching pipeline " + name)
+	return name, 418
+}
+
+func cancelPipeline(name string, logger *logrus.Logger) (string, int) {
+	logger.Info("Cancelling pipeline " + name)
+	return name, 418
 }

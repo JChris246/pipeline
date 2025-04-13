@@ -33,7 +33,7 @@ func validateVars(str string, variables map[string]string) []string {
 	return missing
 }
 
-func ValidatePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) []string {
+func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string, logger *logrus.Logger) []string {
 	var errors []string
 
 	// validate pipeline name
@@ -44,13 +44,17 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) 
 
 	// validate and load variable file
 	var variables map[string]string
-	if pipeline.VariableFile != "" {
+	if pipeline.VariableFile != "" && vars == nil {
 		if _, err := os.Stat(pipeline.VariableFile); os.IsNotExist(err) {
 			logger.Error("Variable file does not exist: " + pipeline.VariableFile)
 			errors = append(errors, "Variable file does not exist: "+pipeline.VariableFile)
 		} else {
 			variables = LoadPipelineVars(pipeline.VariableFile, logger)
 		}
+	}
+
+	if vars != nil {
+		variables = *vars
 	}
 
 	// validate stages
@@ -186,7 +190,13 @@ func CreateVariableFile(variables map[string]string, logger *logrus.Logger) stri
 
 	var fileId = GenerateId()
 	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), "pipeline-variables-"+fileId+".properties")
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+	return SaveVariableFile(variables, filename, logger)
+}
+
+func SaveVariableFile(variables map[string]string, filepath string, logger *logrus.Logger) string {
+	InitDataStoreDir(logger)
+
+	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY, 0644)
 
 	if err != nil {
 		logger.Error("Error creating variable file: " + err.Error())
@@ -207,7 +217,7 @@ func CreateVariableFile(variables map[string]string, logger *logrus.Logger) stri
 		return ""
 	}
 
-	return filename
+	return filepath
 }
 
 func SavePipelineDefinition(pipeline *data.Pipeline, logger *logrus.Logger) string {

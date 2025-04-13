@@ -52,7 +52,7 @@ func run(logger *logrus.Logger, args []string) {
 		return
 	}
 
-	var errors = utils.ValidatePipelineDefinition(pipeline, logger)
+	var errors = utils.ValidatePipelineDefinition(pipeline, nil, logger)
 
 	if len(errors) > 0 {
 		logger.Error("Pipeline validation failed")

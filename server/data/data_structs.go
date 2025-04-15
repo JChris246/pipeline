@@ -6,6 +6,7 @@ type Stage struct {
 	Task      string
 	DependsOn []string `json:"depends_on"`
 	Pwd       string
+	// TODO: should I add the ability to skip a given task
 }
 
 type Pipeline struct {

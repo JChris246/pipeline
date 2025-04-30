@@ -24,7 +24,7 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 	// return the list of registered pipelines
 	router.GET(pipeline, func(c *gin.Context) {
 		var registeredPipelines = loadRegisteredPipelines(logger)
-		registeredPipelineResponses := make([]data.RegisteredPipelineResponse, len(registeredPipelines))
+		registeredPipelineResponses := make([]data.RegisteredPipelineResponse, 0)
 		transformRegisteredPipelines(&registeredPipelines, &registeredPipelineResponses)
 		c.JSON(200, registeredPipelineResponses)
 	})
@@ -127,6 +127,11 @@ func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, log
 		Name:          pipelineRequest.PipelineDefinition.Name,
 		VariablesFile: pipelineRequest.PipelineDefinition.VariableFile, // this is probably not needed
 		Path:          filename,
+	}
+
+	// this also has the potential to leave data in a weird state if this fails
+	if !saveRegisteredPipelines(registeredPipelines, logger) {
+		return "Error saving registered pipelines", 500
 	}
 
 	return "Pipeline registered", 201

@@ -90,7 +90,7 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 			pipeline.Stages[i].Task = injectVariables(stage.Task, variables)
 		}
 
-		var pwdVariableErrors = validateVars(stage.Task, variables)
+		var pwdVariableErrors = validateVars(stage.Pwd, variables)
 		if len(pwdVariableErrors) > 0 {
 			errors = append(errors, pwdVariableErrors...)
 		} else {

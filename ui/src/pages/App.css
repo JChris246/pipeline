@@ -1,0 +1,64 @@
+/* Modal */
+.modal {
+    position: fixed;
+    z-index: 10;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modalcontent {
+    animation: modalopen 0.8s;
+}
+
+@keyframes modalopen {
+    from {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@import "tailwindcss";
+/* toggle */
+
+.toggle-bg:after {
+    content: '';
+    @apply absolute top-0.5 left-0.5 bg-white border border-gray-500 rounded-full h-5 w-5 transition shadow-sm;
+}
+
+input:checked + .toggle-bg:after {
+    transform: translateX(100%);
+    @apply border-white;
+}
+
+input:checked + .toggle-bg {
+    @apply bg-blue-600 border-blue-600;
+}
+
+/* Global */
+
+body * {
+    transition: background-color 250ms ease-in-out, color 250ms ease-in-out;
+}
+
+div.complete {
+    @apply bg-green-500;
+}
+
+div.idle {
+    @apply bg-emerald-200;
+}
+
+div.running {
+    @apply bg-sky-500;
+}
+
+div.failed {
+    @apply bg-red-600;
+}

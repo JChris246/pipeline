@@ -106,6 +106,19 @@ func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSuffic
 	AssertContains(t, errors, "Missing variable: root")
 }
 
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficientForPwd(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node /home/media_central_index.js", Pwd: "{root}"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertMin(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: root")
+}
+
 func Test_ValidatePipelineDefinition_ShouldUsePassedVariablesInsteadOfVariableFile(t *testing.T) {
 	// arrange
 	var pipeline = data.Pipeline{Name: "pipeline 1", Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}

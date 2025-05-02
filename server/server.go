@@ -232,7 +232,7 @@ func deletePipeline(name string, logger *logrus.Logger) (string, int) {
 
 	saveRegisteredPipelines(registeredPipelines, logger)
 
-	return "Pipeline deleted", 204
+	return "Pipeline deleted", 200
 }
 
 func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger *logrus.Logger) (string, int) {
@@ -245,7 +245,7 @@ func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger
 	}
 
 	// check if request is to change the pipeline to one that already exists
-	if _, exists := registeredPipelines[pipelineRequest.Name]; exists {
+	if _, exists := registeredPipelines[pipelineRequest.Name]; exists && pipelineRequest.Name != name {
 		logger.Warn("Cannot change pipeline name: '" + pipelineRequest.Name + "' already exists")
 		return "Cannot change pipeline name: '" + pipelineRequest.Name + "' already exists", 409
 	}
@@ -256,23 +256,45 @@ func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger
 		Parallel: pipelineRequest.Parallel,
 	}
 
-	var errors = utils.ValidatePipelineDefinition(&editPipeline, &pipelineRequest.Variables, logger)
+	var stages []data.Stage
+	b, _ := json.Marshal(pipelineRequest.Stages)
+	json.Unmarshal(b, &stages)
+
+	var editPipelineToValidate = data.Pipeline{
+		Name:     pipelineRequest.Name,
+		Stages:   stages,
+		Parallel: pipelineRequest.Parallel,
+	}
+
+	var errors = utils.ValidatePipelineDefinition(&editPipelineToValidate, &pipelineRequest.Variables, logger)
 	if len(errors) > 0 {
 		logger.Warn("Invalid pipeline definition: " + strings.Join(errors, "\n"))
 		return "Invalid pipeline definition: " + strings.Join(errors, "\n"), 400
 	}
 
+	if len(pipelineRequest.Variables) > 0 && registeredPipelines[name].VariablesFile == "" {
+		var varsFile = utils.CreateVariableFile(pipelineRequest.Variables, logger)
+		if varsFile == "" {
+			logger.Error("Error creating variable file: " + varsFile)
+			return "Error creating variable file", 500
+		}
+		registeredPipelines[name] = data.RegisteredPipeline{
+			Name:          registeredPipelines[name].Name,
+			VariablesFile: varsFile,
+			Path:          registeredPipelines[name].Path,
+		}
+	} else if len(pipelineRequest.Variables) > 0 {
+		// if this fails it has the potential to break the pipeline because of missing variables
+		var error = utils.SaveVariableFile(pipelineRequest.Variables, registeredPipelines[name].VariablesFile, logger)
+		if error != "" {
+			return "Error saving variable file", 500
+		}
+	}
 	editPipeline.VariableFile = registeredPipelines[name].VariablesFile
 
 	var filename = utils.SavePipelineDefinition(&editPipeline, logger)
 	if filename == "" {
 		return "Error saving pipeline definition", 500
-	}
-
-	// if this fails it has the potential to break the pipeline because of missing variables
-	var error = utils.SaveVariableFile(pipelineRequest.Variables, registeredPipelines[name].VariablesFile, logger)
-	if error != "" {
-		return "Error saving variable file", 500
 	}
 
 	// if the name has changed, update index in registeredPipelines

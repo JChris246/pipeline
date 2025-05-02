@@ -2,8 +2,8 @@ package data
 
 // TODO: should a stage support multiple tasks?
 type Stage struct {
-	Name      string
-	Task      string
+	Name      string   `json:"name"`
+	Task      string   `json:"task"`
 	DependsOn []string `json:"depends_on"`
 	Pwd       string
 	// TODO: should I add the ability to skip a given task

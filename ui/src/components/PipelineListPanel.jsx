@@ -24,8 +24,9 @@ const PipelineListPanel = () => {
     const { display: displayNotification } = useNotificationContext();
     const { pipelines, setPipelines, setSelectedPipeline, setShowDetails } = useAppContext();
     const [searchFilter, setSearchFilter] = useState("");
-    const [showAddModal, setShowAddModal] = useState(false);
+    const [showPipelineModal, setShowPipelineModal] = useState(false);
     const [pipeline, setPipeline] = useState(pipelineInitialState);
+    const [existing, setExisting] = useState(false);
 
     const pipelinesContainer = useRef();
 
@@ -91,6 +92,23 @@ const PipelineListPanel = () => {
         });
     };
 
+    const editPipelineRequestPayload = () => {
+        const variables = {};
+        for (let i = 0; i < pipeline.variables.length; i++) {
+            if (pipeline.variables[i].length < 2 || pipeline.variables[i][0].trim().length < 1 || pipeline.variables[i][1].trim().length < 1) {
+                continue;
+            }
+            variables[pipeline.variables[i][0].trim()] = pipeline.variables[i][1].trim();
+        }
+
+        return JSON.stringify({
+            name: pipeline.name.trim(),
+            parallel: pipeline.parallel,
+            stages: pipeline.stages,
+            variables
+        });
+    };
+
     const addVariable = e => {
         e.preventDefault();
         setPipeline({ ...pipeline, variables: [...pipeline.variables, []] });
@@ -143,7 +161,33 @@ const PipelineListPanel = () => {
         e.target.blur();
     };
 
-    const showAddPipelineDialog = () => setShowAddModal(true);
+    const showAddPipelineDialog = () => {
+        setPipeline({ ...pipelineInitialState });
+        setExisting(false);
+        setShowPipelineModal(true);
+    };
+
+    const showEditPipelineDialog = (e, pipelineName) => {
+        e.stopPropagation();
+
+        request({ url: "/api/pipelines/" + pipelineName,
+            callback: ({ msg, success, json }) => {
+                if (success) {
+                    setPipeline({
+                        name: json.name,
+                        parallel: json.parallel,
+                        stages: json.stages,
+                        variables: Object.entries(json.variables)
+                    });
+                    setExisting(true);
+                    setShowPipelineModal(true);
+                } else {
+                    displayNotification({ message: "An error occurred fetching pipeline details: " + msg, type: NotificationType.Error });
+                }
+            }
+        });
+    };
+
     const addPipeline = e => {
         e.preventDefault();
         e.target.blur();
@@ -160,13 +204,54 @@ const PipelineListPanel = () => {
         request({ url: "/api/pipelines/register/json", method: "POST", body: createPipelineRequestPayload(),
             callback: ({ msg, success }) => {
                 if (success) {
-                    // TODO: trigger refresh to get new pipelines
-                    setShowAddModal(false);
+                    setShowPipelineModal(false);
                     displayNotification({ message: "Pipeline registered", type: NotificationType.Success });
-                    setPipeline({ ...pipelineInitialState });
                     getPipelines();
                 } else {
                     displayNotification({ message: "An error occurred adding pipeline: " + msg, type: NotificationType.Error });
+                }
+            }
+        });
+    };
+
+    const updatePipeline = e => {
+        e.preventDefault();
+        e.target.blur();
+
+        // temporarily don't not allow editing pipeline name
+
+        if (!validateStages()) {
+            return;
+        }
+
+        request({ url: "/api/pipelines/" + pipeline.name.trim(), method: "PATCH", body: editPipelineRequestPayload(),
+            callback: ({ msg, success }) => {
+                if (success) {
+                    setShowPipelineModal(false);
+                    displayNotification({ message: "Pipeline updated", type: NotificationType.Success });
+                    getPipelines();
+                } else {
+                    displayNotification({ message: "An error occurred updating pipeline: " + msg, type: NotificationType.Error });
+                }
+            }
+        });
+    };
+
+    const deletePipeline = (e, pipelineName) => {
+        e.preventDefault();
+        e.target.blur();
+        setShowPipelineModal(false);
+
+        request({ url: "/api/pipelines/register/" + pipelineName,
+            method: "DELETE",
+            callback: ({ json, msg, success }) => {
+                if (success) {
+                    // TODO: if pipeline runs is open for this pipeline close it
+                    setShowPipelineModal(false);
+                    displayNotification({ message: json.msg, type: NotificationType.Info });
+                    getPipelines();
+                } else {
+                    displayNotification({ message: "An error occurred deleting pipeline: " + msg, type: NotificationType.Error });
                 }
             }
         });
@@ -182,8 +267,8 @@ const PipelineListPanel = () => {
     const addPipelineTemplate = () => {
         return <div className="w-full h-full lg:w-2/5 lg:h-4/5 mx-auto shadow-sm bg-stone-800 md:rounded-md flex flex-col">
             <div className="w-full p-4 flex justify-between border-b-1 border-stone-700">
-                <h2 className="text-2xl font-bold">Add Pipeline</h2>
-                <button onClick={() => setShowAddModal(false)}
+                <h2 className="text-2xl font-bold">{existing ? "Edit Pipeline" : "Add Pipeline"}</h2>
+                <button onClick={() => setShowPipelineModal(false)}
                     className="w-8 h-8 rounded-full bg-red-900 hover:bg-red-700 focus:bg-red-700 cursor-pointer">&times;</button>
             </div>
             <form className="flex flex-col justify-between p-2 lg:p-4 h-full overflow-y-scroll">
@@ -191,7 +276,7 @@ const PipelineListPanel = () => {
                     <div className="my-2">
                         <label htmlFor="pipelineName" className="block font-bold mb-2">Pipeline Name</label>
                         <input type="text" placeholder="enter pipeline name" name="pipelineName" value={pipeline.name}
-                            onChange={(e) => setPipeline({ ...pipeline, name: e.target.value })}
+                            onChange={(e) => setPipeline({ ...pipeline, name: e.target.value })} disabled={existing}
                             className="shadow border-1 border-stone-300 rounded-sm w-full py-2 px-3" />
                     </div>
                     <div className="my-6">
@@ -268,11 +353,11 @@ const PipelineListPanel = () => {
                         {
                             pipeline.variables.map((v, i) => (
                                 <div className="mb-8 lg:mb-4 flex flex-col lg:flex-row" key={i}>
-                                    <input type="text" placeholder="enter variable name" name={"varKey" + i} value={v[0]}
+                                    <input type="text" placeholder="enter variable name" name={"varKey" + i} value={v[0] ?? ""}
                                         onChange={(e) => updateVariable(i, e.target.value, true)}
                                         className="shadow border-1 border-stone-300 rounded-sm w-full lg:w-1/2 py-2
                                                 px-3 mr-0 lg:mr-2 mb-2 lg:mb-0" />
-                                    <input type="text" placeholder="enter variable value" name={"varValue" + i} value={v[1]}
+                                    <input type="text" placeholder="enter variable value" name={"varValue" + i} value={v[1] ?? ""}
                                         onChange={(e) => updateVariable(i, e.target.value, false)}
                                         className="shadow border-1 border-stone-300 rounded-sm w-full lg:w-1/2 py-2 px-3" />
                                 </div>
@@ -280,16 +365,28 @@ const PipelineListPanel = () => {
                         }
                     </div>
                 </div>
-                <div className="flex w-fit space-x-2">
-                    <button onClick={addPipeline}
-                        className="rounded-sm border-1 hover:bg-green-700 focus:bg-green-700 block ml-auto
-                                cursor-pointer px-4 py-2 font-bold">
-                        Add</button>
-                    {/* TODO: should this clear the form */}
-                    <button onClick={() => setShowAddModal(false)}
-                        className="rounded-sm bg-red-900 hover:bg-red-700 focus:bg-red-700 block ml-auto
-                                cursor-pointer px-4 py-2 font-bold">
-                        Cancel</button>
+                <div className="flex justify-between">
+                    <div className="flex space-x-2 w-fit">
+                        { existing ?
+                            <button onClick={updatePipeline}
+                                className="rounded-sm border-1 hover:bg-sky-700 focus:bg-sky-700 block ml-auto
+                                    cursor-pointer px-4 py-2 font-bold">Update</button>
+                            :
+                            <button onClick={addPipeline}
+                                className="rounded-sm border-1 hover:bg-green-700 focus:bg-green-700 block ml-auto
+                                    cursor-pointer px-4 py-2 font-bold">Add</button>
+                        }
+                        {/* TODO: should probably style this different from the delete button */}
+                        <button onClick={() => setShowPipelineModal(false)}
+                            className="rounded-sm bg-red-900 hover:bg-red-700 focus:bg-red-700 block ml-auto
+                                    cursor-pointer px-4 py-2 font-bold">Cancel</button>
+                    </div>
+                    {
+                        existing &&
+                        <button onClick={(e) => deletePipeline(e, pipeline.name)}
+                            className="rounded-sm bg-red-900 hover:bg-red-700 focus:bg-red-700 block ml-auto
+                                    cursor-pointer px-4 py-2 font-bold">Delete</button>
+                    }
                 </div>
             </form>
         </div>;
@@ -299,7 +396,7 @@ const PipelineListPanel = () => {
         <div className="w-full lg:w-1/3 h-screen overflow-y-hidden bg-indigo-900 flex flex-col">
             {/* add pipeline modal */}
             {
-                showAddModal ? <Modal close={() => setShowAddModal(false)}>
+                showPipelineModal ? <Modal close={() => setShowPipelineModal(false)}>
                     { addPipelineTemplate() }
                 </Modal>: <></>
             }
@@ -319,14 +416,14 @@ const PipelineListPanel = () => {
             </div>
 
             {/* Pipelines header */}
-            <div className="w-full px-2 py-4 border-b-1 border-r-1 border-t-1 border-indigo-700 flex justify-between">
+            <div className="w-full px-2 py-4 border-b-1 border-t-1 border-indigo-700 flex justify-between">
                 <label className="block font-bold">Pipelines</label>
                 <button onClick={showAddPipelineDialog} className="w-8 h-8 rounded-full bg-green-700 hover:bg-green-600
                     focus:bg-green-500 block ml-auto cursor-pointer">+</button>
             </div>
 
             {/* Pipeline list */}
-            <div className="w-full overflow-y-auto flex flex-col scroll-smooth border-r-1 border-indigo-700" ref={pipelinesContainer}>
+            <div className="w-full overflow-y-auto flex flex-col scroll-smooth" ref={pipelinesContainer}>
                 { pipelines?.filter(streamFilter).sort(streamSorter).map((record, key) => (
                     <div key={key} onClick={() => showDetails(record.name)} className="hover:bg-blue-600 flex
                         justify-between px-2 items-center hover:cursor-pointer">
@@ -336,9 +433,15 @@ const PipelineListPanel = () => {
                             </div>
                             <span className="py-2 px-1 font-bold">{record.name}</span>
                         </div>
-                        <div className="flex flex-col py-2 px-1 font-light text-indigo-300">
-                            <span>{record.last_run ?? "-"}</span>
-                            <span>{record.runtime ?? "--:--"}</span>
+                        <div className="flex items-center">
+                            <div className="flex flex-col py-2 px-1 mr-4 font-light text-indigo-300 text-center">
+                                <span>{record.last_run ?? "-"}</span>
+                                <span>{record.runtime ?? "--:--"}</span>
+                            </div>
+                            <button onClick={(e) => showEditPipelineDialog(e, record.name)}>
+                                <span className="px-1 text-stone-100 text-2xl font-bold cursor-pointer rounded-sm
+                                    hover:bg-stone-500 hover:text-stone-100">...</span>
+                            </button>
                         </div>
                     </div>
                 ))}

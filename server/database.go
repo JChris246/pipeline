@@ -42,7 +42,7 @@ func saveRegisteredPipelines(pipelines map[string]data.RegisteredPipeline, logge
 
 	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), REGISTERED_PIPELINES_FILE)
 
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		logger.Error("Error creating registered pipelines file: " + err.Error())
 		return false

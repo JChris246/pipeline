@@ -28,6 +28,7 @@ const Notification = () => {
             cb();
         handleClose();
     };
+
     useEffect(() => {
         if (open) {
             let timeout = setTimeout(close, duration);

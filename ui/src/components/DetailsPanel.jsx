@@ -26,7 +26,8 @@ const DetailsPanel = ({ goBack }) => {
     }, [pipeline]);
 
     return (
-        <div className="flex flex-col fixed md:static w-full lg:w-3/5 h-screen overflow-y-scroll bg-stone-800">
+        <div className="flex flex-col fixed md:static w-full lg:w-2/3 h-screen overflow-y-scroll
+            bg-stone-800 border-none lg:border-1 border-slate-900">
             <div className="h-2/5 lg:h-3/5">
                 No Pipeline runs
             </div>

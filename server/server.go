@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"pipeline/data"
 	"pipeline/utils"
 	"strings"
@@ -109,7 +110,11 @@ func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, log
 		pipelineRequest.PipelineDefinition.VariableFile = varsFile
 	}
 
-	var errors = utils.ValidatePipelineDefinition(&pipelineRequest.PipelineDefinition, nil, logger)
+	var pipelineToValidate data.Pipeline
+	b, _ := json.Marshal(pipelineRequest.PipelineDefinition)
+	json.Unmarshal(b, &pipelineToValidate)
+
+	var errors = utils.ValidatePipelineDefinition(&pipelineToValidate, nil, logger)
 	if len(errors) > 0 {
 		logger.Warn("Invalid pipeline definition: " + strings.Join(errors, "\n"))
 		utils.DeleteFile(varsFile, logger)

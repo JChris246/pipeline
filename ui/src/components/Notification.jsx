@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 const NotificationType = { Success: 0, Warning: 1, Info: 2, Error: 3 };
 
@@ -21,17 +21,19 @@ const NotificationProvider = ({ children }) => {
 
 const Notification = () => {
     const { notificationDialog: { open, message, type, duration, cb }, close: handleClose } = useNotificationContext();
+    const componentRef = useRef();
 
     const close = () =>  {
         if (cb)
             cb();
         handleClose();
     };
-
     useEffect(() => {
         if (open) {
-            // TODO: reset timeout if mouse over notification component
-            const timeout = setTimeout(close, duration);
+            let timeout = setTimeout(close, duration);
+            componentRef.current?.addEventListener("mouseover", () => clearTimeout(timeout));
+            componentRef.current?.addEventListener("mouseout", () => timeout = setTimeout(close, duration));
+
             return () => clearTimeout(timeout);
         }
     }, [open]);
@@ -52,7 +54,7 @@ const Notification = () => {
     ];
 
     return (
-        open ? <div className="max-w-xs bg-white border rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 absolute bottom-2 left-2 z-20" role="alert">
+        open ? <div ref={componentRef} className="max-w-xs bg-white border rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 absolute bottom-2 left-2 z-20" role="alert">
             <div className="flex p-4">
                 <div className="flex-shrink-0">
                     {icons[type]()}

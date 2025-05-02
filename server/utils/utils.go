@@ -17,7 +17,7 @@ import (
 func GenerateId() string {
 	b := make([]byte, 16)
 	rand.Read(b)
-	return fmt.Sprintf("%x-%x-%x-%x-%x%x-%d", b[0:4], b[4:6], b[6:8], b[8:10], b[10:12], b[12:], time.Now().UnixNano())
+	return fmt.Sprintf("%x-%x-%x-%x-%x%x-%d", b[0:4], b[4:6], b[6:8], b[8:10], b[10:12], b[12:], time.Now().UnixMilli())
 }
 
 // GetCurrentTimeStamp generates a timestamp in the format "YYYY-MM-DD HH_MM" or "YYYY-MM-DD HH_MM_SS" if seconds is true.

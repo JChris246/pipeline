@@ -6,7 +6,7 @@ import { NotificationType, useNotificationContext } from "./Notification";
 
 
 const DetailsPanel = ({ goBack }) => {
-    const [setPipelineRuns] = useState([]);
+    const [pipelineRuns, setPipelineRuns] = useState([]);
     const { selectedPipeline: pipeline } = useAppContext();
     const { display: displayNotification } = useNotificationContext();
 
@@ -28,9 +28,11 @@ const DetailsPanel = ({ goBack }) => {
     return (
         <div className="flex flex-col fixed md:static w-full lg:w-2/3 h-screen overflow-y-scroll
             bg-stone-800 border-none lg:border-1 border-slate-900">
-            <div className="h-2/5 lg:h-3/5">
-                No Pipeline runs
-            </div>
+            { pipelineRuns.length < 1 &&
+                <div className="text-3xl font-bold m-auto">
+                    No Pipeline runs
+                </div>
+            }
 
             <div className="flex justify-between mt-8 ml-4 mr-6 text-2xl justify-self-end">
                 <button onClick={() => { if (goBack) goBack(); }}

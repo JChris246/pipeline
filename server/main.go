@@ -59,7 +59,7 @@ func run(logger *logrus.Logger, args []string) {
 		return
 	}
 
-	if runPipeline(pipeline, logger) {
+	if success, _ := runPipeline(pipeline, logger); success {
 		logger.Info("Pipeline completed successfully")
 	} else {
 		logger.Error("Pipeline run failed")
@@ -83,6 +83,7 @@ func serve(logger *logrus.Logger) {
 		router.Use(gin.Recovery())
 	}
 
+	initServer(logger)
 	defineRoutes(router, logger)
 
 	router.StaticFile("/", "static/index.html")

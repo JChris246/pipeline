@@ -10,6 +10,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TODO: also store a map of active runs?
+var Pipelines map[string]*data.PipelineItem = make(map[string]*data.PipelineItem, 20)
+
+func initServer(logger *logrus.Logger) {
+	logger.Info("Initializing server")
+
+	var registeredPipelines = loadRegisteredPipelines(logger)
+	for name, pipeline := range registeredPipelines {
+		Pipelines[name] = &data.PipelineItem{
+			Name:    pipeline.Name,
+			Status:  data.PipelineStatus["IDLE"],
+			LastRun: 0,                           // TODO: look for the last run record and set this
+			Runs:    make([]data.PipelineRun, 0), // TODO: look for the last n run records and set this
+		}
+	}
+}
+
 func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 	const base = "/api"
 	const pipeline = base + "/pipelines"
@@ -91,6 +108,12 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 		var msg, statusCode = cancelPipeline(c.Param("name"), logger)
 		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
 	})
+
+	// get pipeline runs
+	router.GET(pipeline+"/:name/runs", func(c *gin.Context) {
+		var runs, statusCode = getPipelineRuns(c.Param("name"), logger)
+		c.JSON(statusCode, runs)
+	})
 }
 
 func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, logger *logrus.Logger) (string, int) {
@@ -139,6 +162,13 @@ func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, log
 		return "Error saving registered pipelines", 500
 	}
 
+	Pipelines[pipelineRequest.PipelineDefinition.Name] = &data.PipelineItem{
+		Name:    pipelineRequest.PipelineDefinition.Name,
+		Status:  data.PipelineStatus["IDLE"],
+		LastRun: 0,
+		Runs:    make([]data.PipelineRun, 0),
+	}
+
 	return "Pipeline registered", 201
 }
 
@@ -179,8 +209,8 @@ func transformRegisteredPipelines(registeredPipelines *map[string]data.Registere
 	for name := range *registeredPipelines {
 		(*registeredPipelineResponses) = append(*registeredPipelineResponses, data.RegisteredPipelineResponse{
 			Name:    name,
-			LastRun: 0,                           // TODO: load from in memory database
-			Status:  data.PipelineStatus["IDLE"], // TODO: load from in memory database
+			LastRun: Pipelines[name].LastRun,
+			Status:  Pipelines[name].Status,
 		})
 	}
 }
@@ -210,15 +240,19 @@ func getPipelineDetails(name string, logger *logrus.Logger) (*data.RegisteredPip
 		Stages:    pipeline.Stages,
 		Parallel:  pipeline.Parallel,
 		Variables: variables,
-		LastRun:   0,                           // TODO: load from in memory database
-		Status:    data.PipelineStatus["IDLE"], // TODO: load from in memory database
+		LastRun:   Pipelines[pipeline.Name].LastRun,
+		Status:    Pipelines[pipeline.Name].Status,
 	}
 
 	return &details, 200
 }
 
 func deletePipeline(name string, logger *logrus.Logger) (string, int) {
-	// TODO: don't allow deleting a pipeline if it is running
+	if Pipelines[name].Status == data.PipelineStatus["RUNNING"] {
+		logger.Warn("Pipeline " + name + " is running, cannot delete")
+		return "Pipeline is running, cannot delete", 409
+	}
+
 	var registeredPipelines = loadRegisteredPipelines(logger)
 
 	if _, exists := registeredPipelines[name]; !exists {
@@ -231,12 +265,17 @@ func deletePipeline(name string, logger *logrus.Logger) (string, int) {
 	delete(registeredPipelines, name)
 
 	saveRegisteredPipelines(registeredPipelines, logger)
+	delete(Pipelines, name)
 
 	return "Pipeline deleted", 200
 }
 
 func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger *logrus.Logger) (string, int) {
-	// TODO: don't allow editing a pipeline if it is running
+	if Pipelines[name].Status == data.PipelineStatus["RUNNING"] {
+		logger.Warn("Pipeline " + name + " is running, cannot edit")
+		return "Pipeline is running, cannot edit", 409
+	}
+
 	var registeredPipelines = loadRegisteredPipelines(logger)
 
 	if _, exists := registeredPipelines[name]; !exists {
@@ -310,18 +349,57 @@ func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger
 		if !saveRegisteredPipelines(registeredPipelines, logger) {
 			return "Error saving registered pipelines", 500
 		}
+
+		Pipelines[pipelineRequest.Name] = &data.PipelineItem{
+			Name:    pipelineRequest.Name,
+			Status:  Pipelines[name].Status,
+			LastRun: Pipelines[name].LastRun,
+			Runs:    Pipelines[name].Runs,
+		}
+		delete(Pipelines, name)
 	}
 
 	return "Pipeline updated", 200
 }
 
 func launchPipeline(name string, logger *logrus.Logger) (string, int) {
-	// TODO: don't allow launching a new pipeline run if it is already running
+	if _, exists := Pipelines[name]; !exists {
+		logger.Warn("Pipeline with name '" + name + "' does not exist, can't launch")
+		return "Pipeline with name '" + name + "' does not exist", 404
+	}
+
+	if Pipelines[name].Status == data.PipelineStatus["RUNNING"] {
+		logger.Warn("Pipeline " + name + " is already running, will not start new run")
+		return "Pipeline is not running, will not start new run", 409
+	}
+
 	logger.Info("Launching pipeline " + name)
 	return name, 418
 }
 
 func cancelPipeline(name string, logger *logrus.Logger) (string, int) {
+	if _, exists := Pipelines[name]; !exists {
+		logger.Warn("Pipeline with name '" + name + "' does not exist, can't cancel")
+		return "Pipeline with name '" + name + "' does not exist", 404
+	}
+
+	if Pipelines[name].Status != data.PipelineStatus["RUNNING"] {
+		logger.Warn("Pipeline " + name + " is not running, cannot cancel")
+		return "Pipeline is not running, cannot cancel", 409
+	}
+
 	logger.Info("Cancelling pipeline " + name)
 	return name, 418
+}
+
+func getPipelineRuns(name string, logger *logrus.Logger) ([]data.PipelineRun, int) {
+	if _, exists := Pipelines[name]; !exists {
+		logger.Warn("Pipeline with name '" + name + "' does not exist, can't get runs")
+		return []data.PipelineRun{}, 404
+	}
+
+	logger.Info("Getting pipeline runs for " + name)
+
+	// TODO: pull from Pipelines n number of pipeline runs (and if a run is in the active list return?)
+	return []data.PipelineRun{}, 200
 }

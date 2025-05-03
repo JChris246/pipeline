@@ -20,6 +20,10 @@ const pipelineInitialState = {
     variables: [[]]
 };
 
+const HIGH_LEVEL_STATUS = 14;
+const status = { IDLE: 0, COMPLETE: 1, FAILED: 2, RUNNING: 3 };
+
+
 const PipelineListPanel = () => {
     const { display: displayNotification } = useNotificationContext();
     const { pipelines, setPipelines, setSelectedPipeline, setShowDetails } = useAppContext();
@@ -257,12 +261,24 @@ const PipelineListPanel = () => {
         });
     };
 
-    const streamSorter = (a, b) => {
-        // TODO: update with sorting priorities
+    const pipelineSorter = (a, b) => {
+        if (a.status && b.status) {
+
+            const aStatusLevel = !status[a.status.toUpperCase()] &&
+                status[a.status.toUpperCase()] !== 0 ? HIGH_LEVEL_STATUS : status[a.status.toUpperCase()];
+            const bStatusLevel = !status[b.status.toUpperCase()] &&
+                status[b.status.toUpperCase()] !== 0 ? HIGH_LEVEL_STATUS : status[b.status.toUpperCase()];
+
+            if (aStatusLevel === bStatusLevel) {
+                return a.name?.localeCompare(b.name);
+            }
+
+            return bStatusLevel - aStatusLevel;
+        }
         return a.name?.localeCompare(b.name);
     };
 
-    const streamFilter = ({ name }) => searchFilter === "" || name.toLowerCase().includes(searchFilter.toLowerCase());
+    const pipelineFilter = ({ name }) => searchFilter === "" || name.toLowerCase().includes(searchFilter.toLowerCase());
 
     const addPipelineTemplate = () => {
         return <div className="w-full h-full lg:w-2/5 lg:h-4/5 mx-auto shadow-sm bg-stone-800 md:rounded-md flex flex-col">
@@ -424,7 +440,7 @@ const PipelineListPanel = () => {
 
             {/* Pipeline list */}
             <div className="w-full overflow-y-auto flex flex-col scroll-smooth" ref={pipelinesContainer}>
-                { pipelines?.filter(streamFilter).sort(streamSorter).map((record, key) => (
+                { pipelines?.filter(pipelineFilter).sort(pipelineSorter).map((record, key) => (
                     <div key={key} onClick={() => showDetails(record.name)} className="hover:bg-blue-600 flex
                         justify-between px-2 items-center hover:cursor-pointer">
                         <div className="flex items-center">

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"pipeline/data"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -91,10 +93,17 @@ func runTask(stage data.Stage, pipelineName string) (bool, string) {
 	return true, ""
 }
 
-func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) bool {
+// TODO: maybe pass data.PipelineRun to be able to monitor
+func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.PipelineRun) {
 	var threads = 1
 	if pipeline.Parallel {
 		threads = runtime.NumCPU() / 2 // should this be configurable?
+	}
+	logger.Debug("Running pipeline " + pipeline.Name + " with " + fmt.Sprint(threads) + " thread(s)")
+
+	var pipelineRun = data.PipelineRun{
+		Name:      pipeline.Name,
+		StartedAt: time.Now(),
 	}
 
 	// this will need to be managed better when the UI is added and pipelines can be registered
@@ -125,7 +134,7 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) bool {
 				if !taskResponses[dependency].Successful {
 					logger.Warn("Dependency failed: '" + dependency + "' for stage: " + stage.Name + " skipping this stage")
 					// skip this stage as the dependency failed, also mark this stage as failed
-					taskResponses[stage.Name] = data.TaskStatusResponse{TaskName: stage.Name, Successful: false}
+					taskResponses[stage.Name] = data.TaskStatusResponse{TaskName: stage.Name, Successful: false, Skipped: true}
 					dependenciesFailed = true
 					break
 				}
@@ -139,14 +148,15 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) bool {
 		// run task
 		go func(s data.Stage) {
 			defer taskWg.Done()
+			var start = time.Now()
 
 			// spawn process to run task
 			var successful, message = runTask(s, pipeline.Name)
 			if !successful {
 				logger.Error("Task failed: '" + s.Name + "' with message: " + message)
-				taskStatusBuffer <- data.TaskStatusResponse{TaskName: s.Name, Successful: false}
+				taskStatusBuffer <- data.TaskStatusResponse{TaskName: s.Name, Successful: false, StartedAt: start, EndedAt: time.Now()}
 			} else {
-				taskStatusBuffer <- data.TaskStatusResponse{TaskName: s.Name, Successful: true}
+				taskStatusBuffer <- data.TaskStatusResponse{TaskName: s.Name, Successful: true, StartedAt: start, EndedAt: time.Now()}
 			}
 		}(stage)
 		logger.Info("Running task: " + stage.Name)
@@ -175,10 +185,14 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) bool {
 		taskResponses[i.TaskName] = i
 	}
 
+	pipelineRun.EndedAt = time.Now()
 	for _, response := range taskResponses {
+		pipelineRun.Stages = append(pipelineRun.Stages, response)
 		if !response.Successful {
-			return false
+			pipelineRun.Successful = false
 		}
 	}
-	return true
+
+	// TODO: save pipeline run
+	return pipelineRun.Successful, pipelineRun
 }

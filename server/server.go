@@ -13,16 +13,25 @@ import (
 // TODO: also store a map of active runs?
 var Pipelines map[string]*data.PipelineItem = make(map[string]*data.PipelineItem, 20)
 
+const NUM_LAST_RUNS = 10 // TODO: this could maybe be increased/decreased by ui
+
 func initServer(logger *logrus.Logger) {
 	logger.Info("Initializing server")
 
 	var registeredPipelines = loadRegisteredPipelines(logger)
 	for name, pipeline := range registeredPipelines {
+		var runs = loadPipelineRuns(logger, name, NUM_LAST_RUNS)
+		var lastRun int64 = 0
+		// TODO: need to refactor to save pipeline run based on start time (instead of end time)
+		// in order to use startAt be the determiner of last run
+		if len(runs) != 0 {
+			lastRun = runs[0].EndedAt.UnixMilli()
+		}
 		Pipelines[name] = &data.PipelineItem{
 			Name:    pipeline.Name,
 			Status:  data.PipelineStatus["IDLE"],
-			LastRun: 0,                           // TODO: look for the last run record and set this
-			Runs:    make([]data.PipelineRun, 0), // TODO: look for the last n run records and set this
+			LastRun: lastRun,
+			Runs:    runs,
 		}
 	}
 }

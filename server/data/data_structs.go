@@ -18,6 +18,7 @@ type Pipeline struct {
 	VariableFile string `json:"variable_file"`
 }
 
+// TODO: do I need to convert these time.Time to int to save?
 type TaskStatusResponse struct {
 	// TODO: instead of bool success, use a status enum for returning to the UI?
 	TaskName   string
@@ -33,13 +34,13 @@ type PipelineRun struct {
 	StartedAt  time.Time
 	EndedAt    time.Time
 	Successful bool
+	// TODO: should this store the logs for each task?
 }
 
 type RegisteredPipeline struct {
 	Name          string // the name of the pipeline, use as key
 	Path          string // where the definition is stored
 	VariablesFile string
-	// TODO: should I add a list of runs here?
 }
 
 type PipelineItem struct {

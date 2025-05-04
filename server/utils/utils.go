@@ -178,6 +178,20 @@ func InitDataStoreDir(logger *logrus.Logger) {
 	}
 }
 
+func InitDir(dir string, logger *logrus.Logger) bool {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err2 := os.MkdirAll(dir, os.ModePerm)
+		if err2 != nil {
+			logger.Error("Error creating directory: " + dir + " - " + err2.Error())
+			return false
+		} else {
+			logger.Debug("Directory created: " + dir)
+			return true
+		}
+	}
+	return true
+}
+
 func DeleteFile(filename string, logger *logrus.Logger) bool {
 	if filename != "" {
 		err := os.Remove(filename)

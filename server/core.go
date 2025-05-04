@@ -186,6 +186,7 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 	}
 
 	pipelineRun.EndedAt = time.Now()
+	pipelineRun.Successful = true
 	for _, response := range taskResponses {
 		pipelineRun.Stages = append(pipelineRun.Stages, response)
 		if !response.Successful {
@@ -193,6 +194,8 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 		}
 	}
 
-	// TODO: save pipeline run
+	if !savePipelineRun(pipelineRun, logger) {
+		logger.Error("Error saving pipeline run for pipeline: " + pipeline.Name)
+	}
 	return pipelineRun.Successful, pipelineRun
 }

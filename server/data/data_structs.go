@@ -30,7 +30,7 @@ type TaskStatusResponse struct {
 
 type PipelineRun struct {
 	Name       string
-	Stages     []TaskStatusResponse
+	Stages     []TaskStatusResponse // this should probably be a map, instead of array
 	StartedAt  time.Time
 	EndedAt    time.Time
 	Successful bool

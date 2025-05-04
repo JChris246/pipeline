@@ -51,7 +51,7 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 	// return the list of registered pipelines
 	router.GET(pipeline, func(c *gin.Context) {
 		var registeredPipelines = loadRegisteredPipelines(logger)
-		registeredPipelineResponses := make([]data.RegisteredPipelineResponse, 0)
+		registeredPipelineResponses := make([]data.RegisteredPipelineResponse, 0, len(registeredPipelines))
 		transformRegisteredPipelines(&registeredPipelines, &registeredPipelineResponses)
 		c.JSON(200, registeredPipelineResponses)
 	})

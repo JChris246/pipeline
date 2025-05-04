@@ -94,6 +94,7 @@ func runTask(stage data.Stage, pipelineName string) (bool, string) {
 }
 
 // TODO: maybe pass data.PipelineRun to be able to monitor
+// for api server this will need to run on a separate thread?
 func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.PipelineRun) {
 	var threads = 1
 	if pipeline.Parallel {
@@ -102,8 +103,10 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 	logger.Debug("Running pipeline " + pipeline.Name + " with " + fmt.Sprint(threads) + " thread(s)")
 
 	var pipelineRun = data.PipelineRun{
-		Name:      pipeline.Name,
-		StartedAt: time.Now(),
+		Name:       pipeline.Name,
+		StartedAt:  time.Now(),
+		Successful: true,
+		Stages:     make([]data.TaskStatusResponse, 0, len(pipeline.Stages)),
 	}
 
 	// this will need to be managed better when the UI is added and pipelines can be registered
@@ -112,6 +115,20 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 
 	var taskWg sync.WaitGroup
 	var activeThreads = 0
+
+	collect := func(reInit bool) {
+		taskWg.Wait()
+		close(taskStatusBuffer)
+		for i := range taskStatusBuffer {
+			taskResponses[i.TaskName] = i
+			pipelineRun.Stages = append(pipelineRun.Stages, i)
+		}
+		if reInit {
+			taskStatusBuffer = make(chan data.TaskStatusResponse, threads)
+			activeThreads = 0
+		}
+	}
+
 	for _, stage := range pipeline.Stages {
 		// making tasks wait on their dependencies. this why it is critical to define
 		// the order of tasks carefully, because this will block all subsequent tasks
@@ -121,13 +138,7 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 			for _, dependency := range stage.DependsOn {
 				if _, ok := taskResponses[dependency]; !ok {
 					logger.Info("Waiting for dependency: '" + dependency + "' for stage: " + stage.Name)
-					taskWg.Wait() // wait for dependency to finish
-					close(taskStatusBuffer)
-					for i := range taskStatusBuffer {
-						taskResponses[i.TaskName] = i
-					}
-					taskStatusBuffer = make(chan data.TaskStatusResponse, threads)
-					activeThreads = 0
+					collect(true) // wait for dependency to finish
 					logger.Info("Dependency finished: '" + dependency + "' for stage: " + stage.Name)
 				}
 
@@ -167,28 +178,16 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 		// if we have reached the maximum number of threads, wait for them to finish
 		if activeThreads >= threads {
 			logger.Debug("Pausing running new tasks, maximum threads reached")
-			// maybe this should be extracted for reuse?
-			taskWg.Wait()
-			close(taskStatusBuffer)
-			for i := range taskStatusBuffer {
-				taskResponses[i.TaskName] = i
-			}
-			taskStatusBuffer = make(chan data.TaskStatusResponse, threads)
-			activeThreads = 0
+			collect(true)
 			logger.Debug("Resuming running new tasks")
 		}
 	}
 
-	taskWg.Wait()
-	close(taskStatusBuffer)
-	for i := range taskStatusBuffer {
-		taskResponses[i.TaskName] = i
-	}
+	collect(false)
 
 	pipelineRun.EndedAt = time.Now()
-	pipelineRun.Successful = true
 	for _, response := range taskResponses {
-		pipelineRun.Stages = append(pipelineRun.Stages, response)
+		// pipelineRun.Stages = append(pipelineRun.Stages, response)
 		if !response.Successful {
 			pipelineRun.Successful = false
 		}

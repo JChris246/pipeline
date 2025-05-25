@@ -54,7 +54,7 @@ Go is required to be installed to run this project from src. You can find a guid
         },
         {
             "name": "backup",
-            "task": "bash bash {mediaCentralPath}/utils/backup.sh",
+            "task": "bash {mediaCentralPath}/utils/backup.sh",
             "depends_on": ["discover new items", "create similarity map"]
         }
     ]
@@ -75,15 +75,15 @@ Go is required to be installed to run this project from src. You can find a guid
 
 ```ts
 {
-    name: string // pipeline name - required
-    parallel: boolean // run task 1 by 1 or in parallel, respecting dependencies - default false
-    variable_file: string // path to the file to use for variables - optional
+    name: string, // pipeline name - required
+    parallel: boolean, // run task 1 by 1 or in parallel, respecting dependencies - default false
+    variable_file: string, // path to the file to use for variables - optional
     stages: [
         {
-            name: string // stage name - required
-            task: string // action to run (supports variables in string) - required
-            pwd: string // the working directory the task should be run - optional
-            depends_on: []string // list of stage names to have as dependency - optional
+            name: string, // stage name - required
+            task: string, // action to run (supports variables in string) - required
+            pwd: string, // the working directory the task should be run - optional
+            depends_on: []string, // list of stage names to have as dependency - optional
         }
     ]
 }

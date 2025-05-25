@@ -121,7 +121,7 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 		close(taskStatusBuffer)
 		for i := range taskStatusBuffer {
 			taskResponses[i.TaskName] = i
-			pipelineRun.Stages = append(pipelineRun.Stages, i)
+			// pipelineRun.Stages = append(pipelineRun.Stages, i)
 		}
 		if reInit {
 			taskStatusBuffer = make(chan data.TaskStatusResponse, threads)
@@ -187,7 +187,7 @@ func runPipeline(pipeline *data.Pipeline, logger *logrus.Logger) (bool, data.Pip
 
 	pipelineRun.EndedAt = time.Now()
 	for _, response := range taskResponses {
-		// pipelineRun.Stages = append(pipelineRun.Stages, response)
+		pipelineRun.Stages = append(pipelineRun.Stages, response)
 		if !response.Successful {
 			pipelineRun.Successful = false
 		}

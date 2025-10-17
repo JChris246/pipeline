@@ -1,44 +1,71 @@
 /* Modal */
 .modal {
     position: fixed;
-    z-index: 10;
+    z-index: 50;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .modalcontent {
-    animation: modalopen 0.8s;
+    animation: modalopen 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes modalopen {
     from {
-        opacity: 0
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
     }
-
     to {
-        opacity: 1
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }
 
 @import "tailwindcss";
-/* toggle */
+
+/* Modern toggle switch */
+.toggle-bg {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    background-color: #475569;
+    border-radius: 13px;
+    border: 2px solid #475569;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
 
 .toggle-bg:after {
     content: '';
-    @apply absolute top-0.5 left-0.5 bg-white border border-gray-500 rounded-full h-5 w-5 transition shadow-sm;
-}
-
-input:checked + .toggle-bg:after {
-    transform: translateX(100%);
-    @apply border-white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background: white;
+    border-radius: 50%;
+    height: 18px;
+    width: 18px;
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 input:checked + .toggle-bg {
-    @apply bg-blue-600 border-blue-600;
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+input:checked + .toggle-bg:after {
+    transform: translateX(22px);
+}
+
+.toggle-bg:hover {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 /* Global */

@@ -14,7 +14,6 @@ function App() {
     };
 
     return (
-
         <div className="flex">
             <PipelineListPanel/>
             { showDetails && <DetailsPanel goBack={clearDetailPanel}/> }

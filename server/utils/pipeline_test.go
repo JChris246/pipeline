@@ -188,6 +188,20 @@ func Test_validateVars_ReturnsNoErrorsWhenAllVariablesExist(t *testing.T) {
 	AssertEqual(t, 0, len(errors))
 }
 
+func Test_validateVars_ReturnsNoErrorsForEmptyString(t *testing.T) {
+	var str = ""
+	var variables = map[string]string{"varKey": "varValue"}
+	var errors = validateVars(str, variables)
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_validateVars_ReturnsNoErrorsForNoVariablesInString(t *testing.T) {
+	var str = "hello world"
+	var variables = map[string]string{"varKey": "varValue"}
+	var errors = validateVars(str, variables)
+	AssertEqual(t, 0, len(errors))
+}
+
 // TODO: could stand to add more tests for loadPipelineVars
 func Test_loadPipelineVars_ShouldReturnEmptyMapWhenFileDoesNotExist(t *testing.T) {
 	// arrange

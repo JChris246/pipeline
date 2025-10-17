@@ -103,7 +103,7 @@ const DetailsPanel = ({ goBack }) => {
                                                     <div className={`w-2 h-2 rounded-full ${stage.skipped ? "bg-slate-500" : stage.successful ?
                                                         "bg-emerald-500" : "bg-red-500"}`} />
                                                     <span className="text-sm font-medium text-slate-200">
-                                                        {stage.task_name}
+                                                        {stage.taskName}
                                                     </span>
                                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                                                         stage.skipped ? "bg-slate-600/50 text-slate-400" : stage.successful ?

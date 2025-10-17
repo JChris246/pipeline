@@ -13,14 +13,14 @@ import (
 // TODO: also store a map of active runs?
 var Pipelines map[string]*data.PipelineItem = make(map[string]*data.PipelineItem, 20)
 
-const NUM_LAST_RUNS = 10 // TODO: this could maybe be increased/decreased by ui
+const NUM_LAST_RUNS = 10 // this is a limit value for now
 
 func initServer(logger *logrus.Logger) {
 	logger.Info("Initializing server")
 
 	var registeredPipelines = loadRegisteredPipelines(logger)
 	for name, pipeline := range registeredPipelines {
-		var runs = loadPipelineRuns(logger, name, NUM_LAST_RUNS)
+		var runs = loadPipelineRuns(logger, name, NUM_LAST_RUNS) // load latest runs to get the last pipeline run time
 		var lastRun int64 = 0
 		// TODO: need to refactor to save pipeline run based on start time (instead of end time)
 		// in order to use startAt be the determiner of last run
@@ -31,7 +31,6 @@ func initServer(logger *logrus.Logger) {
 			Name:    pipeline.Name,
 			Status:  data.PipelineStatus["IDLE"],
 			LastRun: lastRun,
-			Runs:    runs,
 		}
 	}
 }
@@ -175,7 +174,6 @@ func uploadPipelineDefinition(pipelineRequest *data.RegisterPipelineRequest, log
 		Name:    pipelineRequest.PipelineDefinition.Name,
 		Status:  data.PipelineStatus["IDLE"],
 		LastRun: 0,
-		Runs:    make([]data.PipelineRun, 0),
 	}
 
 	return "Pipeline registered", 201
@@ -363,7 +361,6 @@ func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger
 			Name:    pipelineRequest.Name,
 			Status:  Pipelines[name].Status,
 			LastRun: Pipelines[name].LastRun,
-			Runs:    Pipelines[name].Runs,
 		}
 		delete(Pipelines, name)
 	}
@@ -371,6 +368,7 @@ func editPipeline(name string, pipelineRequest *data.EditPipelineRequest, logger
 	return "Pipeline updated", 200
 }
 
+// This whole web app is a security vulnerability and should be protected by auth, especially this operation
 func launchPipeline(name string, logger *logrus.Logger) (string, int) {
 	if _, exists := Pipelines[name]; !exists {
 		logger.Warn("Pipeline with name '" + name + "' does not exist, can't launch")
@@ -409,6 +407,7 @@ func getPipelineRuns(name string, logger *logrus.Logger) ([]data.PipelineRun, in
 
 	logger.Info("Getting pipeline runs for " + name)
 
-	// TODO: pull from Pipelines n number of pipeline runs (and if a run is in the active list return?)
-	return []data.PipelineRun{}, 200
+	// TODO: add the active pipeline run if exists
+	var runs = loadPipelineRuns(logger, name, NUM_LAST_RUNS)
+	return runs, 200
 }

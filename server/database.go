@@ -15,14 +15,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const PIPELINES_DIR = "pipelines"
+// TODO: support sqlite and mongo alongside this json implementation?
+
 const PIPELINE_RUNS = "pipeline_runs"
 const REGISTERED_PIPELINES_FILE = "registered_pipelines.json"
 
 func loadRegisteredPipelines(logger *logrus.Logger) map[string]data.RegisteredPipeline {
 	utils.InitDataStoreDir(logger)
 
-	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), PIPELINES_DIR, REGISTERED_PIPELINES_FILE)
+	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), REGISTERED_PIPELINES_FILE)
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		logger.Warn("No registered pipelines, returning empty map")
 		return map[string]data.RegisteredPipeline{}
@@ -46,12 +47,8 @@ func loadRegisteredPipelines(logger *logrus.Logger) map[string]data.RegisteredPi
 
 func saveRegisteredPipelines(pipelines map[string]data.RegisteredPipeline, logger *logrus.Logger) bool {
 	utils.InitDataStoreDir(logger)
-	if !utils.InitDir(path.Join(os.Getenv("DATA_STORE_DIR"), PIPELINES_DIR), logger) {
-		logger.Error("Error creating pipelines directory: " + path.Join(os.Getenv("DATA_STORE_DIR"), PIPELINES_DIR))
-		return false
-	}
 
-	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), PIPELINES_DIR, REGISTERED_PIPELINES_FILE)
+	var filename = path.Join(os.Getenv("DATA_STORE_DIR"), REGISTERED_PIPELINES_FILE)
 
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {

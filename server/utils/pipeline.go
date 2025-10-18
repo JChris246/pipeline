@@ -83,6 +83,7 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 			errors = append(errors, stage.Name+" ("+strconv.Itoa(i)+") stage task is missing")
 		}
 
+		// check for missing vars included in the task string
 		var taskVariableErrors = validateVars(stage.Task, variables)
 		if len(taskVariableErrors) > 0 {
 			errors = append(errors, taskVariableErrors...)
@@ -90,11 +91,23 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 			pipeline.Stages[i].Task = injectVariables(stage.Task, variables)
 		}
 
+		// check for missing vars included in the pwd string
 		var pwdVariableErrors = validateVars(stage.Pwd, variables)
 		if len(pwdVariableErrors) > 0 {
 			errors = append(errors, pwdVariableErrors...)
 		} else {
 			pipeline.Stages[i].Pwd = injectVariables(stage.Pwd, variables)
+		}
+
+		// check for missing vars included in any of the task args
+		// TODO: updates tests
+		for j, arg := range stage.Args {
+			var argVariableErrors = validateVars(arg, variables)
+			if len(argVariableErrors) > 0 {
+				errors = append(errors, argVariableErrors...)
+			} else {
+				pipeline.Stages[i].Args[j] = injectVariables(stage.Args[j], variables)
+			}
 		}
 
 		// since the intention is to run stages in the order they are defined, it should be fine to use the

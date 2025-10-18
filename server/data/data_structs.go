@@ -6,9 +6,10 @@ import "time"
 type Stage struct {
 	Name      string   `json:"name"`
 	Task      string   `json:"task"`
+	Args      []string `json:"args"`
 	DependsOn []string `json:"depends_on"`
 	Pwd       string   `json:"pwd"`
-	// TODO: should I add the ability to skip a given task?
+	Skip      bool     `json:"skip"`
 }
 
 type Pipeline struct {
@@ -34,7 +35,7 @@ type PipelineRun struct {
 	StartedAt  time.Time            `json:"startedAt"`
 	EndedAt    time.Time            `json:"endedAt"`
 	Successful bool                 `json:"successful"`
-	// TODO: should this store the logs for each task?
+	// TODO: should this store a reference the logs for each task?
 }
 
 type RegisteredPipeline struct {

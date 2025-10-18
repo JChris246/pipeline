@@ -28,33 +28,40 @@ Go is required to be installed to run this project from src. You can find a guid
     "stages": [
         {
             "name": "discover new items",
-            "task": "node {mediaCentralPath}/media_central_index.js",
+            "task": "node",
+            "args": ["{mediaCentralPath}/media_central_index.js"],
             "pwd": "{mediaCentralPath}",
             "depends_on": []
         },
         {
             "name": "transcribe",
-            "task": "node {mediaCentralPath}/transcription/transcribe.js",
+            "task": "node",
+            "args": ["{mediaCentralPath}/transcription/transcribe.js"],
             "depends_on": ["discover new items"]
         },
         {
             "name": "get tags",
-            "task": "node {mediaCentralPath}/utils/getTags.js",
-            "depends_on": ["discover new items"]
+            "task": "node",
+            "args": ["{mediaCentralPath}/utils/getTags.js"],
+            "depends_on": ["discover new items"],
+            "skip": true
         },
         {
             "name": "refresh cuts",
-            "task": "node {cutsPath}/utils.js",
+            "task": "node",
+            "args": ["{cutsPath}/utils.js"],
             "depends_on": ["discover new items"]
         },
         {
             "name": "create similarity map",
-            "task": "python {mediaCentralPath}/inference/cluster.py",
+            "task": "python",
+            "args": ["{mediaCentralPath}/inference/cluster.py"],
             "depends_on": ["discover new items", "get tags", "transcribe"]
         },
         {
             "name": "backup",
-            "task": "bash {mediaCentralPath}/utils/backup.sh",
+            "task": "bash",
+            "args": ["{mediaCentralPath}/utils/backup.sh"],
             "depends_on": ["discover new items", "create similarity map"]
         }
     ]
@@ -82,8 +89,10 @@ Go is required to be installed to run this project from src. You can find a guid
         {
             name: string, // stage name - required
             task: string, // action to run (supports variables in string) - required
+            args: []string // the args to be passed to the command in 'task' - optional
             pwd: string, // the working directory the task should be run - optional
             depends_on: []string, // list of stage names to have as dependency - optional
+            skip: bool // whether to skip this stage in a given run - optional
         }
     ]
 }

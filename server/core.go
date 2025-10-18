@@ -8,7 +8,6 @@ import (
 	"pipeline/data"
 	"pipeline/utils"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,8 +15,7 @@ import (
 )
 
 func runTask(stage data.Stage, pipelineName string) (bool, string) {
-	var args = strings.Split(stage.Task, " ")
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(stage.Task, stage.Args...)
 	cmd.Dir = stage.Pwd
 
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -180,6 +178,13 @@ func runPipeline(pipeline *data.Pipeline, pipelineRun *data.PipelineRun, logger 
 					dependenciesFailed = true
 					break
 				}
+
+				if taskResponses[dependency].Successful && taskResponses[dependency].Skipped {
+					// skip this stage as the dependency was skipped ... don't run tasks that have dependencies that were skipped
+					logger.Warn("Dependency skipped: '" + dependency + "' for stage: " + stage.Name + " skipping this stage")
+					taskResponses[stage.Name] = data.TaskStatusResponse{TaskName: stage.Name, Successful: true, Skipped: true}
+					break
+				}
 			}
 
 			if dependenciesFailed {
@@ -187,6 +192,21 @@ func runPipeline(pipeline *data.Pipeline, pipelineRun *data.PipelineRun, logger 
 				updatePipelineRun(skippedTask)
 				continue
 			}
+
+			// if skipped because dependency skipped (response marked as skipped and dependencies haven't failed ^)
+			if taskResponses[stage.Name].Skipped {
+				skippedTask := data.TaskStatusResponse{TaskName: stage.Name, Successful: true, Skipped: true}
+				updatePipelineRun(skippedTask)
+				continue
+			}
+		}
+
+		// if should skip this stage, break now and signal  ... if skipped by config mark as successful
+		if stage.Skip {
+			logger.Info("Skipping " + stage.Name + " based on config")
+			taskResponses[stage.Name] = data.TaskStatusResponse{TaskName: stage.Name, Successful: true, Skipped: true}
+			updatePipelineRun(taskResponses[stage.Name])
+			continue
 		}
 
 		// run task

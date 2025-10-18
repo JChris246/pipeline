@@ -74,7 +74,7 @@ func defineRoutes(router *gin.Engine, logger *logrus.Logger) {
 		c.JSON(statusCode, data.ApiErrorResponse{Message: msg})
 	})
 
-	// register a pipeline with a file path
+	// register a pipeline with a file path - currently unused.
 	router.POST(register+"/filepath", func(c *gin.Context) {
 		var requestBody data.RegisterFilePath
 		if err := c.ShouldBind(&requestBody); err != nil {

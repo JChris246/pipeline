@@ -100,7 +100,6 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 		}
 
 		// check for missing vars included in any of the task args
-		// TODO: updates tests
 		for j, arg := range stage.Args {
 			var argVariableErrors = validateVars(arg, variables)
 			if len(argVariableErrors) > 0 {

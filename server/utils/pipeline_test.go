@@ -95,7 +95,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorForNonExistentVariableFile(t *t
 // TODO: add tests for ValidatePipelineDefinition where vars are passed
 func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficient(t *testing.T) {
 	// arrange
-	var pipeline = data.Pipeline{Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
+	var pipeline = data.Pipeline{Stages: []data.Stage{}}
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
 
 	// act
@@ -108,7 +108,7 @@ func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSuffic
 
 func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficientForPwd(t *testing.T) {
 	// arrange
-	var pipeline = data.Pipeline{Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
+	var pipeline = data.Pipeline{Stages: []data.Stage{}}
 	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node /home/media_central_index.js", Pwd: "{root}"})
 
 	// act
@@ -117,6 +117,59 @@ func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSuffic
 	// assert
 	AssertMin(t, 1, len(errors))
 	AssertContains(t, errors, "Missing variable: root")
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficientForArgs(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Args: []string{"/home/media_central_index.js", "{action}"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertMin(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: action")
+}
+
+func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficient(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{"root": "/root"}, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "node /root/media_central_index.js", pipeline.Stages[0].Task)
+	AssertStringEqual(t, "/root", pipeline.Stages[0].Pwd)
+}
+
+func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficientForPwd(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node /home/media_central_index.js", Pwd: "{root}"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{"root": "/root"}, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "/root", pipeline.Stages[0].Pwd)
+}
+
+func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficientForArgs(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Args: []string{"/home/media_central_index.js", "{action}"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{"action": "add"}, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "add", pipeline.Stages[0].Args[1])
 }
 
 func Test_ValidatePipelineDefinition_ShouldUsePassedVariablesInsteadOfVariableFile(t *testing.T) {
@@ -138,7 +191,8 @@ func Test_ValidatePipelineDefinition_ShouldUsePassedVariablesInsteadOfVariableFi
 func Test_ValidatePipelineDefinition_ReturnsPipelineWithInjectedVars(t *testing.T) {
 	// arrange
 	var pipeline = data.Pipeline{Name: "pipeline 1", Stages: []data.Stage{}, VariableFile: "../test_assets/test_var_file.txt"}
-	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node {root}/media_central_index.js", Pwd: "{root}"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1",
+		Task: "node {root}/media_central_index.js", Pwd: "{root}", Args: []string{"{root}"}})
 
 	// act
 	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
@@ -147,6 +201,7 @@ func Test_ValidatePipelineDefinition_ReturnsPipelineWithInjectedVars(t *testing.
 	AssertEqual(t, 0, len(errors))
 	AssertStringEqual(t, "node /home/root/Documents/media_central_index.js", pipeline.Stages[0].Task)
 	AssertStringEqual(t, "/home/root/Documents", pipeline.Stages[0].Pwd)
+	AssertStringEqual(t, "/home/root/Documents", pipeline.Stages[0].Args[0])
 }
 
 func Test_validateVars_ReturnsErrorForNonExistentVariable(t *testing.T) {

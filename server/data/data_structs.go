@@ -12,10 +12,10 @@ type Stage struct {
 }
 
 type Pipeline struct {
-	Name         string
-	Stages       []Stage
-	Parallel     bool
-	VariableFile string `json:"variable_file"`
+	Name         string  `json:"name"`
+	Stages       []Stage `json:"stages"`
+	Parallel     bool    `json:"parallel"`
+	VariableFile string  `json:"variable_file"`
 }
 
 // TODO: do I need to convert these time.Time to int to save?

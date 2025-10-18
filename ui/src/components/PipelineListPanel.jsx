@@ -685,7 +685,7 @@ const PipelineListPanel = () => {
                                                         Running
                                                     </span>
                                                 )}
-                                                {record.last_run && record.last_run > Date.now() - 24 * 60 * 60 * 1000 && (
+                                                {!!record.last_run && record.last_run > Date.now() - 24 * 60 * 60 * 1000 && (
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
                                                         bg-blue-500/20 text-blue-400 border border-blue-500/30">Recent</span>
                                                 )}

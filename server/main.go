@@ -59,7 +59,7 @@ func run(logger *logrus.Logger, args []string) {
 		return
 	}
 
-	if success, _ := runPipeline(pipeline, logger); success {
+	if success, _ := runPipeline(pipeline, nil, logger); success {
 		logger.Info("Pipeline completed successfully")
 	} else {
 		logger.Error("Pipeline run failed")

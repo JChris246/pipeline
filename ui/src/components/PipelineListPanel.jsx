@@ -6,12 +6,16 @@ import { NotificationType, useNotificationContext } from "./Notification";
 import { getRelativeTime } from "../utils/utils";
 
 import Modal from "./Modal";
+import PipelineEmptyState from "./PipelineEmptyState";
+import ArgumentsEmptyState from "./ArgumentsEmptyState";
 
 const stageInitialState = {
     name: "",
     task: "",
+    args: [],
     depends_on: [],
-    pwd: ""
+    pwd: "",
+    skip: false
 };
 
 const pipelineInitialState = {
@@ -52,6 +56,8 @@ const PipelineListPanel = () => {
         });
     };
 
+    // I do as I like
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => getPipelines(), []);
 
     const showDetails = (name) => {
@@ -158,7 +164,6 @@ const PipelineListPanel = () => {
         }
 
         const newStages = [...pipeline.stages];
-        console.log(newStages);
         newStages[index].depends_on.push(value);
         setPipeline({ ...pipeline, stages: newStages });
         e.target.blur();
@@ -167,6 +172,28 @@ const PipelineListPanel = () => {
     const removeDependency = (e, index, depIndex) => {
         const newStages = [...pipeline.stages];
         newStages[index].depends_on.splice(depIndex, 1);
+        setPipeline({ ...pipeline, stages: newStages });
+        e.target.blur();
+    };
+
+    const addArg = (e, index) => {
+        e.preventDefault();
+        const newStages = [...pipeline.stages];
+        newStages[index].args.push("");
+        setPipeline({ ...pipeline, stages: newStages });
+        e.target.blur();
+    };
+
+    const updateArg = (stageIndex, argIndex, value) => {
+        const newStages = [...pipeline.stages];
+        newStages[stageIndex].args[argIndex] = value;
+        setPipeline({ ...pipeline, stages: newStages });
+    };
+
+    const removeArg = (e, stageIndex, argIndex) => {
+        e.preventDefault();
+        const newStages = [...pipeline.stages];
+        newStages[stageIndex].args.splice(argIndex, 1);
         setPipeline({ ...pipeline, stages: newStages });
         e.target.blur();
     };
@@ -410,6 +437,44 @@ const PipelineListPanel = () => {
                                                 className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-100
                                                     placeholder-slate-400 text-sm font-mono" />
                                         </div>
+
+                                        <div className="space-y-2 lg:col-span-2">
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-sm font-medium text-slate-300">Command Arguments</label>
+                                                <button onClick={(e) => addArg(e, i)} type="button"
+                                                    className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-cyan-600 to-blue-600
+                                                        hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-medium
+                                                        transition-all duration-200 shadow-sm hover:shadow-cyan-500/25">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                    </svg>
+                                                    <span>Add Arg</span>
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {(s.args || []).map((arg, argIndex) => (
+                                                    <div key={`stage-${i}-arg-${argIndex}`} className="flex items-center space-x-2">
+                                                        <div className="flex-1">
+                                                            <input type="text" value={arg} name={`stageArg${i}_${argIndex}`}
+                                                                placeholder={`Argument ${argIndex + 1} (e.g., --verbose, --output, ./dist)`}
+                                                                onChange={(e) => updateArg(i, argIndex, e.target.value)}
+                                                                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg
+                                                                    text-slate-100 placeholder-slate-400 text-sm font-mono" />
+                                                        </div>
+                                                        <button onClick={(e) => removeArg(e, i, argIndex)} type="button" className="w-8 h-8
+                                                            rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300
+                                                            transition-all duration-200 flex items-center justify-center flex-shrink-0">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867
+                                                                    12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0
+                                                                    00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {(!s.args || s.args.length === 0) && <ArgumentsEmptyState />}
+                                            </div>
+                                        </div>
                                         <div className="space-y-2">
                                             <label htmlFor={"stagePwd" + i} className="block text-sm font-medium text-slate-300">
                                                 Working Directory
@@ -418,6 +483,32 @@ const PipelineListPanel = () => {
                                                 onChange={(e) => updateStage(i, e.target.value, "pwd")}
                                                 className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg
                                                     text-slate-100 placeholder-slate-400 text-sm font-mono" />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-slate-300">Stage Options</label>
+                                            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg
+                                                border border-slate-600/30">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 flex
+                                                        items-center justify-center">
+                                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636
+                                                                5.636m12.728 12.728L5.636 5.636" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-slate-200 text-sm">Skip Stage</p>
+                                                        <p className="text-xs text-slate-400">Skip this stage during pipeline execution</p>
+                                                    </div>
+                                                </div>
+                                                <label className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                    <input type="checkbox" className="sr-only" checked={s.skip || false} name={"stageSkip" + i}
+                                                        onChange={(e) => updateStage(i, e.target.checked, "skip")} />
+                                                    <div className="toggle-bg"></div>
+                                                </label>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2 lg:col-span-2">
@@ -631,32 +722,10 @@ const PipelineListPanel = () => {
                 {/* Pipeline list */}
                 <div className="w-full overflow-y-auto flex flex-col scroll-smooth py-2" ref={pipelinesContainer}>{
                     pipelines?.filter(pipelineFilter).length === 0 ? (
-                        <div className="flex-1 flex items-center justify-center p-8">
-                            <div className="text-center">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-slate-700 to-slate-600
-                                    flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2
-                                                0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 011-1h6a1 1 0 011 1v2M7 7v2" />
-                                    </svg>
-                                </div>
-                                <h3 className="text-lg font-medium text-slate-300 mb-2">No pipelines found</h3>
-                                <p className="text-sm text-slate-400 mb-4">
-                                    {searchFilter ? `No pipelines match "${searchFilter}"` : "Get started by creating your first pipeline"}
-                                </p>
-                                {!searchFilter && (
-                                    <button onClick={showAddPipelineDialog} className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r
-                                        from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-lg
-                                        font-medium transition-all duration-200 shadow-lg hover:shadow-emerald-500/25">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        <span>Create Pipeline</span>
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        <PipelineEmptyState
+                            searchFilter={searchFilter}
+                            onCreatePipeline={showAddPipelineDialog}
+                        />
                     ) : (
                         pipelines?.filter(pipelineFilter).sort(pipelineSorter).map((record, key) => (
                             <div key={key} onClick={() => showDetails(record.name)} className="mx-3 mb-2 p-4 rounded-xl bg-slate-800/40

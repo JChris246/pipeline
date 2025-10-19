@@ -23,6 +23,8 @@ const DetailsPanel = ({ goBack }) => {
                 }
             }
         });
+    // I do as I like
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pipeline]);
 
     return (

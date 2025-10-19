@@ -16,7 +16,9 @@ import (
 
 func runTask(stage data.Stage, pipelineName string) (bool, string) {
 	cmd := exec.Command(stage.Task, stage.Args...)
+
 	cmd.Dir = stage.Pwd
+	// TODO: allow setting cmd.Env
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {

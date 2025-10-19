@@ -549,11 +549,11 @@ const PipelineListPanel = () => {
                         }
                     </div>
 
-                    {/* Environment vars */}
+                    {/* Pipeline vars */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-2">
-                                <h3 className="text-lg font-semibold text-slate-200">Environment Variables</h3>
+                                <h3 className="text-lg font-semibold text-slate-200">Pipeline Variables</h3>
                                 <span className="px-2 py-1 text-xs bg-purple-600/20 text-purple-400 rounded-lg">{pipeline.variables.length}</span>
                             </div>
                             <button onClick={addVariable}

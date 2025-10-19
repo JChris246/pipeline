@@ -4,6 +4,7 @@ import { request } from "../utils/Fetch";
 import { useAppContext } from "../AppContext";
 import { NotificationType, useNotificationContext } from "./Notification";
 import { formatDate, getDuration } from "../utils/utils";
+import { BackIcon, DocumentIcon } from "../icons";
 
 import EmptyPipelineRuns from "./EmptyPipelineRuns";
 
@@ -40,9 +41,7 @@ const DetailsPanel = ({ goBack }) => {
                     className="rounded-xl px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white
                         font-medium shadow-lg hover:shadow-amber-500/25 transition-all duration-200 block md:hidden
                         focus:ring-2 focus:ring-amber-500/50">
-                    <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
+                    <BackIcon className="w-4 h-4 inline mr-2" />
                     Back
                 </button>
             </div>
@@ -81,11 +80,7 @@ const DetailsPanel = ({ goBack }) => {
                                 {/* Stages */}
                                 <div className="p-4">
                                     <h5 className="text-sm font-medium text-slate-300 mb-3 flex items-center">
-                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0
-                                                002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0
-                                                012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                        </svg>
+                                        <DocumentIcon className="w-4 h-4 mr-2" />
                                         {/* Should I instead count the number of successful runs? */}
                                         Stages ({run.stages.length})
                                     </h5>

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { request } from "../utils/Fetch";
+import { AddIcon,  ClockIcon, CloseIcon, DeleteIcon, EditIcon, LightningIcon, PipelineIcon, PlayIcon,
+    RefreshIcon, SearchIcon, SkipIcon, UploadIcon } from "../icons";
 
 import { useAppContext } from "../AppContext";
 import { NotificationType, useNotificationContext } from "./Notification";
@@ -8,6 +10,7 @@ import { getRelativeTime } from "../utils/utils";
 import Modal from "./Modal";
 import PipelineEmptyState from "./PipelineEmptyState";
 import ArgumentsEmptyState from "./ArgumentsEmptyState";
+import EnvVarsEmptyState from "./EnvVarsEmptyState";
 
 const stageInitialState = {
     name: "",
@@ -15,7 +18,8 @@ const stageInitialState = {
     args: [],
     depends_on: [],
     pwd: "",
-    skip: false
+    skip: false,
+    env: []
 };
 
 const pipelineInitialState = {
@@ -198,6 +202,28 @@ const PipelineListPanel = () => {
         e.target.blur();
     };
 
+    const addEnvVar = (e, index) => {
+        e.preventDefault();
+        const newStages = [...pipeline.stages];
+        newStages[index].env.push("");
+        setPipeline({ ...pipeline, stages: newStages });
+        e.target.blur();
+    };
+
+    const updateEnvVar = (stageIndex, envIndex, value) => {
+        const newStages = [...pipeline.stages];
+        newStages[stageIndex].env[envIndex] = value;
+        setPipeline({ ...pipeline, stages: newStages });
+    };
+
+    const removeEnvVar = (e, stageIndex, envIndex) => {
+        e.preventDefault();
+        const newStages = [...pipeline.stages];
+        newStages[stageIndex].env.splice(envIndex, 1);
+        setPipeline({ ...pipeline, stages: newStages });
+        e.target.blur();
+    };
+
     const showAddPipelineDialog = () => {
         setPipeline({ ...pipelineInitialState });
         setExisting(false);
@@ -320,11 +346,7 @@ const PipelineListPanel = () => {
                 bg-gradient-to-r from-slate-700/50 to-slate-800/50">
                 <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0
-                                    012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
+                        <PipelineIcon className="w-6 h-6 text-white" />
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-slate-100">{existing ? "Edit Pipeline" : "Create Pipeline"}</h2>
@@ -335,9 +357,7 @@ const PipelineListPanel = () => {
                     className="w-12 h-12 rounded-2xl bg-slate-700/50 hover:bg-red-500/20 focus:bg-red-500/20 transition-all
                         duration-200 flex items-center justify-center text-slate-400 hover:text-red-400 border
                         border-slate-600/30 hover:border-red-500/30">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <CloseIcon className="w-5 h-5" />
                 </button>
             </div>
 
@@ -361,9 +381,7 @@ const PipelineListPanel = () => {
                         <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl border border-slate-600/30">
                             <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
+                                    <LightningIcon className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
                                     <p className="font-medium text-slate-200">Parallel Execution</p>
@@ -389,9 +407,7 @@ const PipelineListPanel = () => {
                                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600
                                     hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-medium transition-all
                                     duration-200 shadow-lg hover:shadow-emerald-500/25">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
+                                <AddIcon className="w-4 h-4" />
                                 <span>Add Stage</span>
                             </button>
                         </div>
@@ -412,11 +428,7 @@ const PipelineListPanel = () => {
                                         <button onClick={(e) => deleteStage(e, i)} type="button"
                                             className="w-8 h-8 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300
                                                 transition-all duration-200 flex items-center justify-center">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0
-                                                    0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0
-                                                    00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
+                                            <DeleteIcon className="w-4 h-4" />
                                         </button>
                                     </div>
 
@@ -445,9 +457,7 @@ const PipelineListPanel = () => {
                                                     className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-cyan-600 to-blue-600
                                                         hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-medium
                                                         transition-all duration-200 shadow-sm hover:shadow-cyan-500/25">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                    </svg>
+                                                    <AddIcon className="w-3 h-3" />
                                                     <span>Add Arg</span>
                                                 </button>
                                             </div>
@@ -464,11 +474,7 @@ const PipelineListPanel = () => {
                                                         <button onClick={(e) => removeArg(e, i, argIndex)} type="button" className="w-8 h-8
                                                             rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300
                                                             transition-all duration-200 flex items-center justify-center flex-shrink-0">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867
-                                                                    12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0
-                                                                    00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
+                                                            <DeleteIcon className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 ))}
@@ -485,29 +491,57 @@ const PipelineListPanel = () => {
                                                     text-slate-100 placeholder-slate-400 text-sm font-mono" />
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-slate-300">Stage Options</label>
-                                            <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg
-                                                border border-slate-600/30">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 flex
-                                                        items-center justify-center">
-                                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636
-                                                                5.636m12.728 12.728L5.636 5.636" />
-                                                        </svg>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-slate-200 text-sm">Skip Stage</p>
-                                                        <p className="text-xs text-slate-400">Skip this stage during pipeline execution</p>
-                                                    </div>
+                                        <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg
+                                            border border-slate-600/30">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 flex
+                                                    items-center justify-center">
+                                                    <SkipIcon className="w-4 h-4 text-white" />
                                                 </div>
-                                                <label className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                                                    <input type="checkbox" className="sr-only" checked={s.skip || false} name={"stageSkip" + i}
-                                                        onChange={(e) => updateStage(i, e.target.checked, "skip")} />
-                                                    <div className="toggle-bg"></div>
-                                                </label>
+                                                <div>
+                                                    <p className="font-medium text-slate-200 text-sm">Skip Stage</p>
+                                                    <p className="text-xs text-slate-400">Skip this stage during pipeline execution</p>
+                                                </div>
+                                            </div>
+                                            <label className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                <input type="checkbox" className="sr-only" checked={s.skip || false} name={"stageSkip" + i}
+                                                    onChange={(e) => updateStage(i, e.target.checked, "skip")} />
+                                                <div className="toggle-bg"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="space-y-2 lg:col-span-2">
+                                            <div className="flex justify-between items-center">
+                                                <label className="block text-sm font-medium text-slate-300">Environment Variables</label>
+                                                <button onClick={(e) => addEnvVar(e, i)} type="button"
+                                                    className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-green-600 to-emerald-600
+                                                        hover:from-green-500 hover:to-emerald-500 text-white rounded-lg text-xs font-medium
+                                                        transition-all duration-200 shadow-sm hover:shadow-green-500/25">
+                                                    <AddIcon className="w-3 h-3" />
+                                                    <span>Add Env Var</span>
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {(s.env || []).map((envVar, envIndex) => (
+                                                    <div key={`stage-${i}-env-${envIndex}`} className="flex items-center space-x-2">
+                                                        <div className="flex-1">
+                                                            <input type="text" value={envVar} name={`stageEnv${i}_${envIndex}`}
+                                                                placeholder="Environment variable (e.g., NODE_ENV=production, DEBUG=true)"
+                                                                onChange={(e) => updateEnvVar(i, envIndex, e.target.value)}
+                                                                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg
+                                                                    text-slate-100 placeholder-slate-400 text-sm font-mono" />
+                                                        </div>
+                                                        <button onClick={(e) => removeEnvVar(e, i, envIndex)} type="button"
+                                                            className="w-8 h-8 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400
+                                                                hover:text-red-300 transition-all duration-200 flex items-center
+                                                                justify-center flex-shrink-0">
+                                                            <DeleteIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {(!s.env || s.env.length === 0) && (
+                                                    <EnvVarsEmptyState />
+                                                )}
                                             </div>
                                         </div>
 
@@ -524,10 +558,7 @@ const PipelineListPanel = () => {
                                                             <span>{d}</span>
                                                             <button type="button" className="ml-2 text-sky-200 hover:text-white transition-colors"
                                                                 onClick={(e) => removeDependency(e, i, j)}>
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round"
-                                                                        strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                </svg>
+                                                                <CloseIcon className="w-4 h-4" />
                                                             </button>
                                                         </span>
                                                     ))}
@@ -560,9 +591,7 @@ const PipelineListPanel = () => {
                                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500
                                     hover:to-indigo-500 text-white rounded-xl font-medium transition-all duration-200
                                     shadow-lg hover:shadow-purple-500/25">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
+                                <AddIcon className="w-4 h-4" />
                                 <span>Add Variable</span>
                             </button>
                         </div>
@@ -600,28 +629,21 @@ const PipelineListPanel = () => {
                         existing ? <button onClick={updatePipeline}
                             className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500
                                 hover:to-sky-500 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-blue-500/25">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
+                            <UploadIcon className="w-4 h-4" />
                             <span>Update Pipeline</span>
                         </button> :
                             <button onClick={addPipeline}
                                 className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600
                                     hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-medium transition-all duration-200
                                     shadow-lg hover:shadow-green-500/25">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
+                                <AddIcon className="w-4 h-4" />
                                 <span>Create Pipeline</span>
                             </button>
                     }
                     <button onClick={() => setShowPipelineModal(false)}
                         className="flex items-center space-x-2 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50
                             hover:border-slate-500/50 text-slate-300 hover:text-slate-200 rounded-xl font-medium transition-all duration-200">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <CloseIcon className="w-4 h-4" />
                         <span>Cancel</span>
                     </button>
                     </div>
@@ -629,11 +651,7 @@ const PipelineListPanel = () => {
                         <button onClick={(e) => deletePipeline(e, pipeline.name)} type="button"
                             className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-700 to-rose-700 hover:from-red-600
                                 hover:to-rose-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-red-500/25">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1
-                                        1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <DeleteIcon className="w-4 h-4" />
                             <span>Delete Pipeline</span>
                         </button>
                     )}
@@ -659,19 +677,12 @@ const PipelineListPanel = () => {
                             border-slate-600/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all
                             duration-200 placeholder-slate-400"/>
                     <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none pl-4">
-                        <svg className="h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                            fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1
-                                1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5
-                                5.5 0 0 1 11 0z"/>
-                        </svg>
+                        <SearchIcon className="h-4 w-4 text-slate-400" />
                     </div>
                     {searchFilter && (
                         <button onClick={() => setSearchFilter("")}
                             className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-200 transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <CloseIcon className="w-4 h-4" />
                         </button>
                     )}
                 </div>
@@ -683,20 +694,14 @@ const PipelineListPanel = () => {
                             <h2 className="text-lg font-semibold text-slate-200">Pipelines</h2>
                             <button onClick={getPipelines} title="Refresh pipelines"
                                 className="p-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-400 hover:text-slate-200">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003
-                                            0 01-15.357-2m15.357 2H15" />
-                                </svg>
+                                <RefreshIcon className="w-4 h-4" />
                             </button>
                         </div>
                         <button onClick={showAddPipelineDialog} title="Add new pipeline"
                             className="w-9 h-9 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500
                                 hover:to-emerald-400 shadow-lg hover:shadow-emerald-500/25 flex items-center
                                 justify-center text-white font-semibold">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
+                            <AddIcon className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -772,18 +777,12 @@ const PipelineListPanel = () => {
                                             }}
                                             title="Run Pipeline" className="p-1.5 rounded-lg hover:bg-emerald-600/20 text-slate-400
                                                 hover:text-emerald-400 transition-all duration-200">
-                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
+                                            <PlayIcon className="w-4 h-4" />
                                         </button>
                                         <button onClick={(e) => showEditPipelineDialog(e, record.name)} title="Edit Pipeline"
                                             className="p-1.5 rounded-lg hover:bg-slate-600/50 text-slate-400 hover:text-slate-200
                                                 transition-all duration-200">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828
-                                                        2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
+                                            <EditIcon className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
@@ -791,10 +790,7 @@ const PipelineListPanel = () => {
                                 {/* Pipeline Metrics */}
                                 <div className="grid grid-cols-1 gap-3 text-xs">
                                     <div className="flex items-center space-x-2 px-3 py-2 bg-slate-700/30 rounded-lg border border-slate-600/30">
-                                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                        <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
                                         <span className="text-slate-400">Last run</span>
                                         <span className="text-slate-300 font-medium ml-auto">{formatLastRun(record.last_run)}</span>
                                     </div>
@@ -806,18 +802,13 @@ const PipelineListPanel = () => {
                                         <>
                                             {record.status === "complete" && (
                                                 <div className="flex items-center space-x-1 text-xs text-emerald-400">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
+                                                    <CheckIcon className="w-3 h-3" />
                                                     <span>Completed</span>
                                                 </div>
                                             )}
                                             {record.status === "failed" && (
                                                 <div className="flex items-center space-x-1 text-xs text-red-400">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round"
-                                                            strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
+                                                    <CloseIcon className="w-3 h-3" />
                                                     <span>Failed</span>
                                                 </div>
                                             )}

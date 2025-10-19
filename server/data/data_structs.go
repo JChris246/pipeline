@@ -10,6 +10,7 @@ type Stage struct {
 	DependsOn []string `json:"depends_on"`
 	Pwd       string   `json:"pwd"`
 	Skip      bool     `json:"skip"`
+	Env       []string `json:"env"`
 }
 
 type Pipeline struct {

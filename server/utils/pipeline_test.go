@@ -132,6 +132,19 @@ func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSuffic
 	AssertContains(t, errors, "Missing variable: action")
 }
 
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficientForEnv(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Env: []string{"FFMPEG_PATH={ffmpeg_path}"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertMin(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: ffmpeg_path")
+}
+
 func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficient(t *testing.T) {
 	// arrange
 	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
@@ -170,6 +183,45 @@ func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSuffic
 	// assert
 	AssertEqual(t, 0, len(errors))
 	AssertStringEqual(t, "add", pipeline.Stages[0].Args[1])
+}
+
+func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficientForEnv(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Env: []string{"FFMPEG_PATH={ffmpeg_path}"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{"ffmpeg_path": "/usr/bin"}, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "FFMPEG_PATH=/usr/bin", pipeline.Stages[0].Env[0])
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenInvalidFormatForEnv(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Env: []string{"FFMPEG_PATH:/usr/bin"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "invalid env format: 'FFMPEG_PATH:/usr/bin'")
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenInvalidFormat_BlankString_ForEnv(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "node", Env: []string{" "}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "invalid env format: ' '")
 }
 
 func Test_ValidatePipelineDefinition_ShouldUsePassedVariablesInsteadOfVariableFile(t *testing.T) {

@@ -31,6 +31,7 @@ Go is required to be installed to run this project from src. You can find a guid
             "task": "node",
             "args": ["{mediaCentralPath}/media_central_index.js"],
             "pwd": "{mediaCentralPath}",
+            "env": ["FFMPEG_PATH=/usr/bin"],
             "depends_on": []
         },
         {
@@ -91,6 +92,7 @@ Go is required to be installed to run this project from src. You can find a guid
             task: string, // action to run (supports variables in string) - required
             args: []string // the args to be passed to the command in 'task' - optional
             pwd: string, // the working directory the task should be run - optional
+            env: []string, // env vars for the task run the format [KEY=VALUE]
             depends_on: []string, // list of stage names to have as dependency - optional
             skip: bool // whether to skip this stage in a given run - optional
         }

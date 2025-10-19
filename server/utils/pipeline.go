@@ -33,6 +33,16 @@ func validateVars(str string, variables map[string]string) []string {
 	return missing
 }
 
+func validateKeyValuePair(line string) (string, string) {
+	// split line into key and value
+	keyValuePair := strings.Split(line, "=")
+	if len(keyValuePair) != 2 {
+		return "", "invalid env format: '" + line + "'"
+	} else {
+		return strings.TrimSpace(line), ""
+	}
+}
+
 func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string, logger *logrus.Logger) []string {
 	var errors []string
 
@@ -106,6 +116,21 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 				errors = append(errors, argVariableErrors...)
 			} else {
 				pipeline.Stages[i].Args[j] = injectVariables(stage.Args[j], variables)
+			}
+		}
+
+		// check for missing vars included in any of the env entries and verify each arg entry is in correct format
+		for j, env := range stage.Env {
+			var validatedEnv, envFormatError = validateKeyValuePair(env)
+			if envFormatError != "" {
+				errors = append(errors, envFormatError)
+				continue
+			}
+			var envVariableErrors = validateVars(validatedEnv, variables)
+			if len(envVariableErrors) > 0 {
+				errors = append(errors, envVariableErrors...)
+			} else {
+				pipeline.Stages[i].Env[j] = injectVariables(validatedEnv, variables)
 			}
 		}
 

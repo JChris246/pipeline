@@ -341,7 +341,7 @@ const PipelineListPanel = () => {
 
     const addPipelineTemplate = () => {
         return <div className="w-full h-full lg:w-3/5 lg:h-5/6 mx-auto shadow-sm bg-gradient-to-br from-slate-800/95 to-slate-900/95
-            backdrop-blur-xl rounded-3xl flex flex-col border border-slate-600/30 overflow-hidden">
+            backdrop-blur-xl lg:rounded-3xl flex flex-col border border-slate-600/30 overflow-hidden">
             <div className="w-full p-8 flex justify-between items-center border-b border-slate-600/30
                 bg-gradient-to-r from-slate-700/50 to-slate-800/50">
                 <div className="flex items-center space-x-3">

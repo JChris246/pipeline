@@ -143,6 +143,10 @@ func ValidatePipelineDefinition(pipeline *data.Pipeline, vars *map[string]string
 					logger.Error(stage.Name + " ( index - " + strconv.Itoa(i) + ") depends on a non-existent stage: " + dependency)
 					errors = append(errors, stage.Name+" ("+strconv.Itoa(i)+") dependency '"+dependency+"' has not been defined")
 				}
+				if dependency == stage.Name {
+					logger.Error("Cannot have self as a dependency " + stage.Name)
+					errors = append(errors, stage.Name+" ("+strconv.Itoa(i)+") listed self as dependency")
+				}
 			}
 		}
 	}
@@ -177,6 +181,7 @@ func LoadDefinition(definitionPath string, logger *logrus.Logger) *data.Pipeline
 	return &pipeline
 }
 
+// TODO: Should this be revised to keep everything after the first '=' as value?
 func LoadPipelineVars(varFile string, logger *logrus.Logger) map[string]string {
 	var variables = make(map[string]string)
 	if varFile != "" {

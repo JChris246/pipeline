@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"pipeline/utils"
 
@@ -66,6 +67,37 @@ func run(logger *logrus.Logger, args []string) {
 	}
 }
 
+func help() {
+	fmt.Println("Pipeline Tool " + VERSION)
+	fmt.Println()
+	fmt.Println("USAGE:")
+	fmt.Println("  pipeline <subcommand> [options]")
+	fmt.Println()
+	fmt.Println("AVAILABLE SUBCOMMANDS:")
+	fmt.Println("  run        Execute a pipeline definition file")
+	fmt.Println("  serve      Start the pipeline server with web UI")
+	fmt.Println("  version    Display the version information")
+	fmt.Println("  help       Display this help message")
+	fmt.Println()
+	fmt.Println("RUN SUBCOMMAND OPTIONS:")
+	fmt.Println("  -definition <path>    Path to pipeline definition file (required)")
+	fmt.Println()
+	fmt.Println("SERVE SUBCOMMAND:")
+	fmt.Println("  Starts a web server for managing pipelines through a UI")
+	fmt.Println("  Default port: 8080 (override with SERVER_PORT environment variable)")
+	fmt.Println()
+	fmt.Println("ENVIRONMENT VARIABLES:")
+	fmt.Println("  LOG_DIR       Directory for log files")
+	fmt.Println("  SERVER_PORT   Port for the web server (default: 8080)")
+	fmt.Println("  ENV          Environment mode")
+	fmt.Println()
+	fmt.Println("EXAMPLES:")
+	fmt.Println("  pipeline run --definition my-pipeline.json")
+	fmt.Println("  pipeline serve")
+	fmt.Println("  pipeline version")
+	fmt.Println("  pipeline help")
+}
+
 func serve(logger *logrus.Logger) {
 	logger.Info("Running as server")
 
@@ -123,8 +155,8 @@ func main() {
 		serve(logger)
 	case "version":
 		logger.Info("Version: " + VERSION)
-	// case "help":
-	// 	help(logger)
+	case "help":
+		help()
 	default:
 		logger.Error("Unknown subcommand: " + os.Args[1])
 	}

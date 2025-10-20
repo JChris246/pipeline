@@ -10,7 +10,20 @@ var _ = os.Setenv("ENV", "test")
 var _, testLogger = SetupLogger("test.log")
 
 // TODO: write more structured tests, with test cases and better error messages etc
-// TODO: add positive tests
+// TODO: add more positive tests?
+
+func Test_ValidatePipelineDefinition_ReturnsErrorForMissingPipelineName(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "echo"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertMin(t, 1, len(errors))
+	AssertContains(t, errors, "Pipeline name is missing")
+}
 
 func Test_ValidatePipelineDefinition_ReturnsErrorForHavingZeroStages(t *testing.T) {
 	// act
@@ -145,6 +158,29 @@ func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSuffic
 	AssertContains(t, errors, "Missing variable: ffmpeg_path")
 }
 
+func Test_ValidatePipelineDefinition_ReturnsErrorWhenPassedVariablesAreNotSufficient_MultipleStageFields(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{
+		Name: "stage 1",
+		Task: "node {script}",
+		Pwd:  "{workdir}",
+		Args: []string{"{arg1}", "{arg2}"},
+		Env:  []string{"PATH={env_path}"},
+	})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &map[string]string{}, testLogger)
+
+	// assert
+	AssertMin(t, 5, len(errors))
+	AssertContains(t, errors, "Missing variable: script")
+	AssertContains(t, errors, "Missing variable: workdir")
+	AssertContains(t, errors, "Missing variable: arg1")
+	AssertContains(t, errors, "Missing variable: arg2")
+	AssertContains(t, errors, "Missing variable: env_path")
+}
+
 func Test_ValidatePipelineDefinition_ReturnsNoErrorsWhenPassedVariablesAreSufficient(t *testing.T) {
 	// arrange
 	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
@@ -256,6 +292,130 @@ func Test_ValidatePipelineDefinition_ReturnsPipelineWithInjectedVars(t *testing.
 	AssertStringEqual(t, "/home/root/Documents", pipeline.Stages[0].Args[0])
 }
 
+func Test_ValidatePipelineDefinition_InjectsVariablesInAllStageFields(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{
+		Name: "stage 1",
+		Task: "node {script}",
+		Pwd:  "{workdir}",
+		Args: []string{"{arg1}", "{arg2}"},
+		Env:  []string{"PATH={env_path}"}})
+
+	var variables = map[string]string{
+		"script":   "app.js",
+		"workdir":  "/home/user",
+		"arg1":     "start",
+		"arg2":     "production",
+		"env_path": "/usr/bin"}
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &variables, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "node app.js", pipeline.Stages[0].Task)
+	AssertStringEqual(t, "/home/user", pipeline.Stages[0].Pwd)
+	AssertStringEqual(t, "start", pipeline.Stages[0].Args[0])
+	AssertStringEqual(t, "production", pipeline.Stages[0].Args[1])
+	AssertStringEqual(t, "PATH=/usr/bin", pipeline.Stages[0].Env[0])
+}
+
+func Test_ValidatePipelineDefinition_HandlesCaseSensitiveVariables(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "echo {VAR} {var} {Var}"})
+	var variables = map[string]string{"VAR": "uppercase", "var": "lowercase", "Var": "mixed"}
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, &variables, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+	AssertStringEqual(t, "echo uppercase lowercase mixed", pipeline.Stages[0].Task)
+}
+
+func Test_ValidatePipelineDefinition_ReturnsNoErrorsForValidPipelineWithMinimalData(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test pipeline", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage 1", Task: "echo 'hello'"})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_ValidatePipelineDefinition_HandlesStagesWithEmptyArgsAndEnv(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "simple", Task: "echo hello", Args: []string{}, Env: []string{}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_ValidatePipelineDefinition_HandlesMultipleDependenciesCorrectly(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "build", Task: "npm run build"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "test", Task: "npm test"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "deploy", Task: "npm run deploy", DependsOn: []string{"build", "test"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorForPartialDependencyMatches(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "build", Task: "npm run build"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "deploy", Task: "npm run deploy", DependsOn: []string{"build", "test", "lint"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(errors))
+	AssertContains(t, errors, "deploy (1) dependency 'test' has not been defined")
+	AssertContains(t, errors, "deploy (1) dependency 'lint' has not been defined")
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorForSelfDependency(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "stage1", Task: "echo", DependsOn: []string{"stage1"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "stage1 (0) listed self as dependency")
+}
+
+func Test_ValidatePipelineDefinition_ReturnsErrorForMultipleDependenciesIncludingSelf(t *testing.T) {
+	// arrange
+	var pipeline = data.Pipeline{Name: "test", Stages: []data.Stage{}}
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "build", Task: "npm run build"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "test", Task: "npm test"})
+	pipeline.Stages = append(pipeline.Stages, data.Stage{Name: "deploy", Task: "npm run deploy", DependsOn: []string{"build", "test", "deploy"}})
+
+	// act
+	var errors = ValidatePipelineDefinition(&pipeline, nil, testLogger)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "deploy (2) listed self as dependency")
+}
+
 func Test_validateVars_ReturnsErrorForNonExistentVariable(t *testing.T) {
 	// arrange
 	var variables = map[string]string{"varKey": "varValue"}
@@ -309,7 +469,136 @@ func Test_validateVars_ReturnsNoErrorsForNoVariablesInString(t *testing.T) {
 	AssertEqual(t, 0, len(errors))
 }
 
-// TODO: could stand to add more tests for loadPipelineVars
+func Test_validateVars_HandlesDuplicateVariables(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"root": "/home"}
+	var str = "cp {root}/file1 {root}/file2 {root}/backup"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_validateVars_HandlesVariablesWithNumbers(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"var1": "value1", "var2": "value2"}
+	var str = "command {var1} {var2}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_validateVars_HandlesVariablesWithUnderscores(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"my_var": "value", "another_var_123": "value2"}
+	var str = "command {my_var} {another_var_123}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_validateVars_IgnoresMalformedVariables(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"valid": "value"}
+	var str = "command {valid} {invalid-var} {another.var} {space var}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	// Should only report missing "valid" variables, malformed ones are ignored by regex
+	AssertEqual(t, 0, len(errors))
+}
+
+func Test_validateVars_HandlesVariableAtStringStart(t *testing.T) {
+	// arrange
+	var variables = map[string]string{}
+	var str = "{start_var}/path/to/file"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: start_var")
+}
+
+func Test_validateVars_HandlesVariableAtStringEnd(t *testing.T) {
+	// arrange
+	var variables = map[string]string{}
+	var str = "/path/to/{end_var}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: end_var")
+}
+
+func Test_validateVars_HandlesConsecutiveVariables(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"var1": "value1"}
+	var str = "{var1}{missing_var}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	AssertEqual(t, 1, len(errors))
+	AssertContains(t, errors, "Missing variable: missing_var")
+}
+
+func Test_validateVars_HandlesNilVariablesMap(t *testing.T) {
+	// arrange
+	var str = "command {var1} {var2}"
+
+	// act
+	var errors = validateVars(str, nil)
+
+	// assert
+	// Should handle nil map gracefully and report all variables as missing
+	AssertEqual(t, 2, len(errors))
+	AssertContains(t, errors, "Missing variable: var1")
+	AssertContains(t, errors, "Missing variable: var2")
+}
+
+// TODO: update the logic to only add unique missing vars to the error list?
+func Test_validateVars_ReportsEachMissingVariableOnce(t *testing.T) {
+	// arrange
+	var variables = map[string]string{}
+	var str = "command {missing} and {missing} again {missing}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	// Should report the same missing variable multiple times if it appears multiple times
+	AssertEqual(t, 3, len(errors))
+	AssertContains(t, errors, "Missing variable: missing")
+}
+
+func Test_validateVars_HandlesEmptyVariableName(t *testing.T) {
+	// arrange
+	var variables = map[string]string{"valid": "value"}
+	var str = "command {valid} {}"
+
+	// act
+	var errors = validateVars(str, variables)
+
+	// assert
+	// Empty braces {} should be ignored by the regex pattern
+	AssertEqual(t, 0, len(errors))
+}
+
 func Test_loadPipelineVars_ShouldReturnEmptyMapWhenFileDoesNotExist(t *testing.T) {
 	// arrange
 	var filePath = "/does/not/exist"
@@ -334,6 +623,121 @@ func Test_loadPipelineVars_ShouldCorrectlyLoadVarsFromFile(t *testing.T) {
 	AssertStringEqual(t, "dev", variables["ENV"])
 }
 
+func Test_loadPipelineVars_ShouldReturnEmptyMapWhenFilePathIsEmpty(t *testing.T) {
+	// arrange
+	var filePath = ""
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 0, len(variables))
+}
+
+func Test_loadPipelineVars_ShouldHandleInvalidFormatLines_OnlyLoadValidVars(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/test_invalid_var_file.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "value1", variables["key1"])
+	AssertStringEqual(t, "value2", variables["key2"])
+}
+
+func Test_loadPipelineVars_ShouldHandleEmptyKeys(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/missing_key_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 1, len(variables))
+	AssertStringEqual(t, "value2", variables["valid_key"])
+}
+
+func Test_loadPipelineVars_ShouldHandleEmptyValues(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/empty_var_value.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "", variables["key1"])
+	AssertStringEqual(t, "value2", variables["key2"])
+}
+
+func Test_loadPipelineVars_ShouldTrimWhitespace(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/trailing_space_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "value1", variables["key1"])
+	AssertStringEqual(t, "value2", variables["key2"])
+}
+
+func Test_loadPipelineVars_ShouldOverwriteDuplicateKeys(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/duplicate_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "second_value", variables["key1"])
+	AssertStringEqual(t, "value2", variables["key2"])
+}
+
+func Test_loadPipelineVars_ShouldHandleMultipleEquals(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/multiple_equals_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "value1", variables["key1"])
+	AssertStringEqual(t, "value3", variables["key3"])
+}
+
+func Test_loadPipelineVars_ShouldHandleEmptyLines(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/empty_lines_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 2, len(variables))
+	AssertStringEqual(t, "value1", variables["key1"])
+	AssertStringEqual(t, "value2", variables["key2"])
+}
+
+func Test_loadPipelineVars_ShouldHandleSpecialCharacters(t *testing.T) {
+	// arrange
+	var filePath = "../test_assets/special_chars_var.txt"
+
+	// act
+	var variables = LoadPipelineVars(filePath, testLogger)
+
+	// assert
+	AssertEqual(t, 3, len(variables))
+	AssertStringEqual(t, "/usr/bin:/usr/local/bin", variables["PATH"])
+	AssertStringEqual(t, "https://example.com/path", variables["SIMPLE_URL"])
+	AssertStringEqual(t, "echo \"hello world\"", variables["COMMAND"])
+}
+
 func Test_injectVariables_ShouldCorrectReplaceVariableKeyWithTheirValues(t *testing.T) {
 	// arrange
 	var task = "node {root}/media_central_index.js.{suffix}"
@@ -344,4 +748,178 @@ func Test_injectVariables_ShouldCorrectReplaceVariableKeyWithTheirValues(t *test
 
 	// assert
 	AssertStringEqual(t, "node /home/root/Documents/media_central_index.js.", result)
+}
+
+func Test_validateKeyValuePair_ValidFormat(t *testing.T) {
+	// arrange
+	validLine := "KEY=value"
+
+	// act
+	result, error := validateKeyValuePair(validLine)
+
+	// assert
+	if error != "" {
+		t.Errorf("validateKeyValuePair() should not return error for valid format: %s", error)
+	}
+
+	if result != "KEY=value" {
+		t.Errorf("validateKeyValuePair() should return trimmed line, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_ValidFormatWithSpaces(t *testing.T) {
+	// arrange
+	validLineWithSpaces := "  KEY=value  "
+
+	// act
+	result, error := validateKeyValuePair(validLineWithSpaces)
+
+	// assert
+	if error != "" {
+		t.Errorf("validateKeyValuePair() should not return error for valid format with spaces: %s", error)
+	}
+
+	if result != "KEY=value" {
+		t.Errorf("validateKeyValuePair() should return trimmed line, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_EmptyValue(t *testing.T) {
+	// arrange
+	emptyValueLine := "KEY="
+
+	// act
+	result, error := validateKeyValuePair(emptyValueLine)
+
+	// assert
+	if error != "" {
+		t.Errorf("validateKeyValuePair() should not return error for empty value: %s", error)
+	}
+
+	if result != "KEY=" {
+		t.Errorf("validateKeyValuePair() should return trimmed line, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_InvalidFormat_NoEquals(t *testing.T) {
+	// arrange
+	invalidLine := "KEYVALUE"
+
+	// act
+	result, error := validateKeyValuePair(invalidLine)
+
+	// assert
+	if error == "" {
+		t.Error("validateKeyValuePair() should return error for missing equals sign")
+	}
+
+	expectedError := "invalid env format: 'KEYVALUE'"
+	if error != expectedError {
+		t.Errorf("validateKeyValuePair() should return correct error message, got: %s", error)
+	}
+
+	if result != "" {
+		t.Errorf("validateKeyValuePair() should return empty string for invalid format, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_InvalidFormat_WrongSeparator(t *testing.T) {
+	// arrange
+	invalidLine := "KEY:VALUE"
+
+	// act
+	result, error := validateKeyValuePair(invalidLine)
+
+	// assert
+	if error == "" {
+		t.Error("validateKeyValuePair() should return error for missing equals sign")
+	}
+
+	expectedError := "invalid env format: 'KEY:VALUE'"
+	if error != expectedError {
+		t.Errorf("validateKeyValuePair() should return correct error message, got: %s", error)
+	}
+
+	if result != "" {
+		t.Errorf("validateKeyValuePair() should return empty string for invalid format, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_InvalidFormat_MultipleEquals(t *testing.T) {
+	// arrange
+	invalidLine := "KEY=VALUE=EXTRA"
+
+	// act
+	result, error := validateKeyValuePair(invalidLine)
+
+	// assert
+	if error == "" {
+		t.Error("validateKeyValuePair() should return error for multiple equals signs")
+	}
+
+	expectedError := "invalid env format: 'KEY=VALUE=EXTRA'"
+	if error != expectedError {
+		t.Errorf("validateKeyValuePair() should return correct error message, got: %s", error)
+	}
+
+	if result != "" {
+		t.Errorf("validateKeyValuePair() should return empty string for invalid format, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_InvalidFormat_EmptyString(t *testing.T) {
+	// arrange
+	emptyLine := ""
+
+	// act
+	result, error := validateKeyValuePair(emptyLine)
+
+	// assert
+	if error == "" {
+		t.Error("validateKeyValuePair() should return error for empty string")
+	}
+
+	expectedError := "invalid env format: ''"
+	if error != expectedError {
+		t.Errorf("validateKeyValuePair() should return correct error message, got: %s", error)
+	}
+
+	if result != "" {
+		t.Errorf("validateKeyValuePair() should return empty string for invalid format, got: %s", result)
+	}
+}
+
+// function should maybe handle this as error, but we'll let cmd.Env handle it
+func Test_validateKeyValuePair_InvalidFormat_OnlyEquals(t *testing.T) {
+	// arrange
+	equalsOnlyLine := "="
+
+	// act
+	result, error := validateKeyValuePair(equalsOnlyLine)
+
+	// assert
+	if error != "" {
+		t.Errorf("validateKeyValuePair() should not return error for '=' (empty key and value): %s", error)
+	}
+
+	if result != "=" {
+		t.Errorf("validateKeyValuePair() should return trimmed line, got: %s", result)
+	}
+}
+
+func Test_validateKeyValuePair_ValidFormatWithSpecialCharacters(t *testing.T) {
+	// arrange
+	specialCharsLine := "PATH=/usr/bin:/usr/local/bin"
+
+	// act
+	result, error := validateKeyValuePair(specialCharsLine)
+
+	// assert
+	if error != "" {
+		t.Errorf("validateKeyValuePair() should not return error for valid format with special chars: %s", error)
+	}
+
+	if result != "PATH=/usr/bin:/usr/local/bin" {
+		t.Errorf("validateKeyValuePair() should return trimmed line, got: %s", result)
+	}
 }

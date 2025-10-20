@@ -1,0 +1,3 @@
+key1=value1
+invalid_line_no_equals
+key2=value2

@@ -1,0 +1,3 @@
+PATH=/usr/bin:/usr/local/bin
+SIMPLE_URL=https://example.com/path
+COMMAND=echo "hello world"

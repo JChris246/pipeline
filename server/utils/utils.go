@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Generate a unique id in the format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-timestamp
+// Where x is a hexadecimal character and timestamp is a Unix millisecond timestamp
 func GenerateId() string {
 	b := make([]byte, 16)
 	rand.Read(b)

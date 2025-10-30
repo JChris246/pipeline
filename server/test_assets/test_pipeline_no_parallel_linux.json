@@ -1,0 +1,30 @@
+{
+    "name": "test_pipeline_run_no_parallel",
+    "parallel": false,
+    "stages": [
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 1; echo Initialize stage completed"],
+            "depends_on": []
+        },
+        {
+            "name": "build_frontend",
+            "task": "bash",
+            "args": ["-c", "sleep 3; echo Frontend build completed"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "build_backend",
+            "task": "bash",
+            "args": ["-c", "sleep 4; echo Backend build completed"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "run_tests",
+            "task": "bash",
+            "args": ["-c", "sleep 3; echo Tests completed successfully"],
+            "depends_on": []
+        }
+    ]
+}

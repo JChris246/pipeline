@@ -20,54 +20,54 @@ Go is required to be installed to run this project from src. You can find a guid
 
 3. Define tasks for the pipeline using json. Refer to [📃 Pipeline Definition Schema](#-pipeline-definition-schema) for description of available properties. Below is an example:
 
-```json
-{
-    "name": "media_central",
-    "parallel": true,
-    "variable_file": "variables.txt",
-    "stages": [
-        {
-            "name": "discover new items",
-            "task": "node",
-            "args": ["{mediaCentralPath}/media_central_index.js"],
-            "pwd": "{mediaCentralPath}",
-            "env": ["FFMPEG_PATH=/usr/bin"],
-            "depends_on": []
-        },
-        {
-            "name": "transcribe",
-            "task": "node",
-            "args": ["{mediaCentralPath}/transcription/transcribe.js"],
-            "depends_on": ["discover new items"]
-        },
-        {
-            "name": "get tags",
-            "task": "node",
-            "args": ["{mediaCentralPath}/utils/getTags.js"],
-            "depends_on": ["discover new items"],
-            "skip": true
-        },
-        {
-            "name": "refresh cuts",
-            "task": "node",
-            "args": ["{cutsPath}/utils.js"],
-            "depends_on": ["discover new items"]
-        },
-        {
-            "name": "create similarity map",
-            "task": "python",
-            "args": ["{mediaCentralPath}/inference/cluster.py"],
-            "depends_on": ["discover new items", "get tags", "transcribe"]
-        },
-        {
-            "name": "backup",
-            "task": "bash",
-            "args": ["{mediaCentralPath}/utils/backup.sh"],
-            "depends_on": ["discover new items", "create similarity map"]
-        }
-    ]
-}
-```
+    ```json
+    {
+        "name": "media_central",
+        "parallel": true,
+        "variable_file": "variables.txt",
+        "stages": [
+            {
+                "name": "discover new items",
+                "task": "node",
+                "args": ["{mediaCentralPath}/media_central_index.js"],
+                "pwd": "{mediaCentralPath}",
+                "env": ["FFMPEG_PATH=/usr/bin"],
+                "depends_on": []
+            },
+            {
+                "name": "transcribe",
+                "task": "node",
+                "args": ["{mediaCentralPath}/transcription/transcribe.js"],
+                "depends_on": ["discover new items"]
+            },
+            {
+                "name": "get tags",
+                "task": "node",
+                "args": ["{mediaCentralPath}/utils/getTags.js"],
+                "depends_on": ["discover new items"],
+                "skip": true
+            },
+            {
+                "name": "refresh cuts",
+                "task": "node",
+                "args": ["{cutsPath}/utils.js"],
+                "depends_on": ["discover new items"]
+            },
+            {
+                "name": "create similarity map",
+                "task": "python",
+                "args": ["{mediaCentralPath}/inference/cluster.py"],
+                "depends_on": ["discover new items", "get tags", "transcribe"]
+            },
+            {
+                "name": "backup",
+                "task": "bash",
+                "args": ["{mediaCentralPath}/utils/backup.sh"],
+                "depends_on": ["discover new items", "create similarity map"]
+            }
+        ]
+    }
+    ```
 
 4. Create the variable file (Optional). Variables in the file are define as `key=value`, 1 per line. *Variables are defined in the pipeline definition with `{}`*
 

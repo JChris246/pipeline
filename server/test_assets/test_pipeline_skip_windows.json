@@ -1,0 +1,56 @@
+{
+    "name": "test_skip_pipeline_run",
+    "parallel": true,
+    "variable_file": "",
+    "stages": [
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"],
+            "depends_on": []
+        },
+        {
+            "name": "build_frontend",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 4; Write-Host 'Frontend build completed'"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "build_backend",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 5; Write-Host 'Backend build completed'"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "run_tests",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 4; Write-Host 'Tests completed successfully'"],
+            "depends_on": ["build_frontend", "build_backend"]
+        },
+        {
+            "name": "security_scan",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Security scan completed'"],
+            "depends_on": ["build_frontend", "build_backend"],
+            "skip": true
+        },
+        {
+            "name": "package",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 6; Write-Host 'Packaging completed'"],
+            "depends_on": ["run_tests", "security_scan"]
+        },
+        {
+            "name": "deploy_staging",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Staging deployment completed'"],
+            "depends_on": ["package"]
+        },
+        {
+            "name": "integration_tests",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 5; Write-Host 'Integration tests completed'"],
+            "depends_on": ["deploy_staging"]
+        }
+    ]
+}

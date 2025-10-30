@@ -45,12 +45,13 @@ func runTask(stage data.Stage, pipelineName string) (bool, string) {
 	}
 	defer logFile.Close()
 
-	var errorLogName = utils.CreateOutputLogName(pipelineName, stage.Name, true)
-	errorLogFile, err := os.OpenFile(errorLogName, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return false, err.Error()
-	}
-	defer errorLogFile.Close()
+	// Do we really want a separate file for the error logs?
+	// var errorLogName = utils.CreateOutputLogName(pipelineName, stage.Name, true)
+	// errorLogFile, err := os.OpenFile(errorLogName, os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	return false, err.Error()
+	// }
+	// defer errorLogFile.Close()
 
 	logReaderWg := sync.WaitGroup{}
 	logReaderWg.Add(2)

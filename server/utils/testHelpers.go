@@ -48,6 +48,54 @@ func AssertEqual(t *testing.T, expected int, actual int) bool {
 	return true
 }
 
+func AssertTrue(t *testing.T, value bool) bool {
+	if !value {
+		t.Errorf("%s", t.Name()+" - Expected value to be true but was false")
+		return false
+	}
+	return true
+}
+
+func AssertFalse(t *testing.T, value bool) bool {
+	if value {
+		t.Errorf("%s", t.Name()+" - Expected value to be false but was true")
+		return false
+	}
+	return true
+}
+
+func AssertLessThan(t *testing.T, target int, value int) bool {
+	if value >= target {
+		t.Errorf(t.Name() + " - Expected: \"" + strconv.Itoa(value) + "\", to be less than: \"" + strconv.Itoa(target) + "\"")
+		return false
+	}
+	return true
+}
+
+func AssertLessThanOrEqualTo(t *testing.T, target int, value int) bool {
+	if value > target {
+		t.Errorf(t.Name() + " - Expected: \"" + strconv.Itoa(value) + "\", to be less than: \"" + strconv.Itoa(target) + "\"")
+		return false
+	}
+	return true
+}
+
+func AssertGreaterThan(t *testing.T, target int, value int) bool {
+	if value <= target {
+		t.Errorf(t.Name() + " - Expected: \"" + strconv.Itoa(value) + "\", to be greater than: \"" + strconv.Itoa(target) + "\"")
+		return false
+	}
+	return true
+}
+
+func AssertGreaterThanOrEqualTo(t *testing.T, target int, value int) bool {
+	if value < target {
+		t.Errorf(t.Name() + " - Expected: \"" + strconv.Itoa(value) + "\", to be greater than: \"" + strconv.Itoa(target) + "\"")
+		return false
+	}
+	return true
+}
+
 func AssertMin(t *testing.T, min int, value int) bool {
 	if value < min {
 		t.Errorf(t.Name() + " - Expected: \"" + strconv.Itoa(value) + "\", to be at least: \"" + strconv.Itoa(min) + "\"")

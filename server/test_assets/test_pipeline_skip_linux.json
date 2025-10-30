@@ -1,0 +1,56 @@
+{
+    "name": "test_skip_pipeline_run",
+    "parallel": true,
+    "variable_file": "",
+    "stages": [
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"],
+            "depends_on": []
+        },
+        {
+            "name": "build_frontend",
+            "task": "bash",
+            "args": ["-c", "sleep 4; echo Frontend build completed"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "build_backend",
+            "task": "bash",
+            "args": ["-c", "sleep 5; echo Backend build completed"],
+            "depends_on": ["initialize"]
+        },
+        {
+            "name": "run_tests",
+            "task": "bash",
+            "args": ["-c", "sleep 4; echo Tests completed successfully"],
+            "depends_on": ["build_frontend", "build_backend"]
+        },
+        {
+            "name": "security_scan",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Security scan completed"],
+            "depends_on": ["build_frontend", "build_backend"],
+            "skip": true
+        },
+        {
+            "name": "package",
+            "task": "bash",
+            "args": ["-c", "sleep 6; echo Packaging completed"],
+            "depends_on": ["run_tests", "security_scan"]
+        },
+        {
+            "name": "deploy_staging",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Staging deployment completed"],
+            "depends_on": ["package"]
+        },
+        {
+            "name": "integration_tests",
+            "task": "bash",
+            "args": ["-c", "sleep 5; echo Integration tests completed"],
+            "depends_on": ["deploy_staging"]
+        }
+    ]
+}

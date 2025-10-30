@@ -1,0 +1,56 @@
+{
+    "name": "test_pipeline_run_overload",
+    "parallel": true,
+    "stages": [
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        },
+        {
+            "name": "initialize",
+            "task": "bash",
+            "args": ["-c", "sleep 2; echo Initialize stage completed"]
+        }
+    ]
+}

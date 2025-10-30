@@ -1,0 +1,56 @@
+{
+    "name": "test_pipeline_run_overload",
+    "parallel": true,
+    "stages": [
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        },
+        {
+            "name": "initialize",
+            "task": "powershell",
+            "args": ["-Command", "Start-Sleep 2; Write-Host 'Initialize stage completed'"]
+        }
+    ]
+}
